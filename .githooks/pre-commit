@@ -1,0 +1,136 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+UPDATE_SCRIPT="${REPO_ROOT}/scripts/update_component_versions.py"
+PRECOMMIT_LOG_FILE_NAME="opamp-pre-commit.log"
+PRECOMMIT_GUARD_DIR_NAME="opamp-pre-commit.guard"
+UNAME_TEXT="$(uname -s 2>/dev/null || true)"
+IS_WINDOWS_LIKE_SHELL=0
+if [[ "${UNAME_TEXT}" == MINGW* || "${UNAME_TEXT}" == MSYS* || "${UNAME_TEXT}" == CYGWIN* ]]; then
+  IS_WINDOWS_LIKE_SHELL=1
+fi
+
+_resolve_git_common_dir() {
+  local git_common_dir
+  git_common_dir="$(git rev-parse --git-common-dir 2>/dev/null || true)"
+  if [ -z "${git_common_dir}" ]; then
+    git_common_dir="${REPO_ROOT}/.git"
+  elif [[ "${git_common_dir}" != /* ]]; then
+    git_common_dir="${REPO_ROOT}/${git_common_dir}"
+  fi
+  printf "%s\n" "${git_common_dir}"
+}
+
+_append_pre_commit_log() {
+  local git_common_dir log_path timestamp parent_process
+  git_common_dir="$(_resolve_git_common_dir)"
+  log_path="${git_common_dir}/${PRECOMMIT_LOG_FILE_NAME}"
+  timestamp="$(date -u +"%Y-%m-%dT%H:%M:%SZ" 2>/dev/null || true)"
+  if [ -z "${timestamp}" ]; then
+    timestamp="unknown-time"
+  fi
+  parent_process="$(ps -o comm= -p "${PPID}" 2>/dev/null || true)"
+  if [ -z "${parent_process}" ]; then
+    parent_process="unknown-parent"
+  fi
+  printf "%s pre-commit invoked repo=%s cwd=%s ppid=%s parent=%s\n" \
+    "${timestamp}" \
+    "${REPO_ROOT}" \
+    "$(pwd)" \
+    "${PPID}" \
+    "${parent_process}" >> "${log_path}" 2>/dev/null || true
+}
+
+if [ "${OPAMP_PRECOMMIT_LOG:-1}" != "0" ]; then
+  _append_pre_commit_log
+fi
+
+_release_precommit_guard() {
+  if [ -n "${OPAMP_PRECOMMIT_GUARD_DIR:-}" ] && [ -d "${OPAMP_PRECOMMIT_GUARD_DIR}" ]; then
+    rm -f "${OPAMP_PRECOMMIT_GUARD_DIR}/pid" 2>/dev/null || true
+    rmdir "${OPAMP_PRECOMMIT_GUARD_DIR}" 2>/dev/null || true
+  fi
+}
+
+_acquire_precommit_guard() {
+  local git_common_dir guard_dir guard_pid_file existing_pid
+  git_common_dir="$(_resolve_git_common_dir)"
+  guard_dir="${git_common_dir}/${PRECOMMIT_GUARD_DIR_NAME}"
+  guard_pid_file="${guard_dir}/pid"
+  OPAMP_PRECOMMIT_GUARD_DIR="${guard_dir}"
+
+  if mkdir "${guard_dir}" 2>/dev/null; then
+    printf "%s\n" "$$" > "${guard_pid_file}" 2>/dev/null || true
+    trap _release_precommit_guard EXIT
+    return 0
+  fi
+
+  existing_pid="$(cat "${guard_pid_file}" 2>/dev/null || true)"
+  if [ -n "${existing_pid}" ] && kill -0 "${existing_pid}" 2>/dev/null; then
+    echo "[pre-commit] existing OpAMP pre-commit run detected (pid ${existing_pid}); skipping duplicate invocation." >&2
+    return 1
+  fi
+
+  rm -f "${guard_pid_file}" 2>/dev/null || true
+  rmdir "${guard_dir}" 2>/dev/null || true
+  if mkdir "${guard_dir}" 2>/dev/null; then
+    printf "%s\n" "$$" > "${guard_pid_file}" 2>/dev/null || true
+    trap _release_precommit_guard EXIT
+    return 0
+  fi
+
+  echo "[pre-commit] could not acquire OpAMP pre-commit guard; skipping duplicate invocation." >&2
+  return 1
+}
+
+if ! _acquire_precommit_guard; then
+  exit 0
+fi
+
+_run_update_script() {
+  if [ -x "${REPO_ROOT}/.venv/bin/python3" ]; then
+    "${REPO_ROOT}/.venv/bin/python3" "${UPDATE_SCRIPT}" --quiet
+    return 0
+  fi
+  if [ -x "${REPO_ROOT}/.venv/bin/python" ]; then
+    "${REPO_ROOT}/.venv/bin/python" "${UPDATE_SCRIPT}" --quiet
+    return 0
+  fi
+  if [[ "${IS_WINDOWS_LIKE_SHELL}" -eq 1 ]] && [ -x "${REPO_ROOT}/.venv/Scripts/python.exe" ]; then
+    if command -v cygpath >/dev/null 2>&1; then
+      "${REPO_ROOT}/.venv/Scripts/python.exe" "$(cygpath -w "${UPDATE_SCRIPT}")" --quiet
+    else
+      "${REPO_ROOT}/.venv/Scripts/python.exe" "${UPDATE_SCRIPT}" --quiet
+    fi
+    return 0
+  fi
+  if command -v py >/dev/null 2>&1; then
+    py -3 "${UPDATE_SCRIPT}" --quiet
+    return 0
+  fi
+  if command -v python3 >/dev/null 2>&1; then
+    python3 "${UPDATE_SCRIPT}" --quiet
+    return 0
+  fi
+  if command -v python >/dev/null 2>&1; then
+    python "${UPDATE_SCRIPT}" --quiet
+    return 0
+  fi
+  return 1
+}
+
+if ! _run_update_script; then
+  echo "[pre-commit] python runtime not found; cannot update component versions." >&2
+  echo "[pre-commit] searched .venv/Scripts/python.exe, .venv/bin/python3, .venv/bin/python, py -3, python3, python." >&2
+  echo "[pre-commit] GitKraken can run with a restricted PATH. Configure Python in PATH for the app, or create repo .venv and re-run scripts/install_git_hooks.*." >&2
+  exit 1
+fi
+
+git add \
+  "${REPO_ROOT}/provider/src/opamp_provider/version.json" \
+  "${REPO_ROOT}/agent_broker/opamp_broker/version.json" \
+  "${REPO_ROOT}/consumer/src/opamp_consumer/version.json" \
+  "${REPO_ROOT}/consumer-sim/version.json"
+
+

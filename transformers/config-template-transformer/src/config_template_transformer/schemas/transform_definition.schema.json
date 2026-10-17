@@ -1,0 +1,94 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$comment": "Copyright 2026 opamp.info; licensed under the Apache License, Version 2.0.",
+  "title": "Observability fragment transform definition",
+  "description": "Defines a versioned JSONPath-to-Jinja configuration fragment transform.",
+  "type": "object",
+  "required": ["api_version", "kind", "metadata", "spec"],
+  "properties": {
+    "api_version": {
+      "const": "opamp.info/v1alpha2",
+      "description": "Version of the transform-definition contract."
+    },
+    "kind": {
+      "const": "ObservabilityFragmentTransform",
+      "description": "Resource kind understood by this transformer."
+    },
+    "metadata": {
+      "type": "object",
+      "required": ["name", "version"],
+      "properties": {
+        "name": {"type": "string", "minLength": 1, "description": "Stable transform name."},
+        "version": {"type": "string", "minLength": 1, "description": "Semantic transform version."}
+      },
+      "additionalProperties": false
+    },
+    "spec": {
+      "type": "object",
+      "required": ["detector", "target", "output", "render", "rules"],
+      "properties": {
+        "detector": {
+          "type": "object",
+          "required": ["name", "version_constraint"],
+          "properties": {
+            "name": {"type": "string", "minLength": 1, "description": "Detector name to select."},
+            "version_constraint": {"type": "string", "minLength": 1, "description": "PEP 440 detector-version constraint."}
+          },
+          "additionalProperties": false
+        },
+        "target": {
+          "type": "object",
+          "required": ["tool", "version_constraint"],
+          "properties": {
+            "tool": {"type": "string", "minLength": 1, "description": "Target adapter name, initially fluent-bit."},
+            "version_constraint": {"type": "string", "minLength": 1, "description": "PEP 440 target-version constraint."}
+          },
+          "additionalProperties": false
+        },
+        "output": {
+          "type": "object",
+          "required": ["path", "include_path"],
+          "properties": {
+            "path": {"type": "string", "minLength": 1, "description": "Artifact path relative to the output root."},
+            "include_path": {"type": "string", "minLength": 1, "description": "Literal path the parent configuration should include."}
+          },
+          "additionalProperties": false
+        },
+        "render": {
+          "type": "object",
+          "required": ["engine", "template", "metadata_file", "version", "template_api_version", "context_name"],
+          "properties": {
+            "engine": {"const": "jinja2", "description": "Sandboxed rendering engine."},
+            "template": {"type": "string", "minLength": 1, "description": "Template path relative to the template root."},
+            "metadata_file": {"type": "string", "minLength": 1, "description": "Template metadata sidecar path relative to the template root."},
+            "version": {"type": "string", "minLength": 1, "description": "Semantic template version."},
+            "template_api_version": {"type": "string", "minLength": 1, "description": "Version of the template context contract."},
+            "context_name": {"type": "string", "pattern": "^[A-Za-z_][A-Za-z0-9_]*$", "description": "Jinja variable receiving normalized plugins."}
+          },
+          "additionalProperties": false
+        },
+        "rules": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": ["name", "for_each", "path_from", "values"],
+            "properties": {
+              "name": {"type": "string", "minLength": 1, "description": "Stable rule name."},
+              "for_each": {"type": "string", "pattern": "^\\$", "description": "RFC 9535 JSONPath selecting source rows."},
+              "path_from": {"type": "string", "pattern": "^\\$", "description": "RFC 9535 JSONPath selecting paths from each row."},
+              "values": {
+                "type": "object",
+                "minProperties": 1,
+                "description": "JSON-compatible values copied into emitted plugin objects."
+              }
+            },
+            "additionalProperties": false
+          }
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

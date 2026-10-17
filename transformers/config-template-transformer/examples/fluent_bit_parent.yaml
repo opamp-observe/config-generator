@@ -1,0 +1,11 @@
+# Copyright 2026 opamp.info
+# Licensed under the Apache License, Version 2.0.
+
+service:
+  flush: 1
+  log_level: debug
+
+pipeline:
+  outputs:
+    - name: stdout
+      match: "*"

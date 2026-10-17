@@ -1,0 +1,12 @@
+# Copyright 2026 opamp.info
+# Licensed under the Apache License, Version 2.0.
+
+.git
+**/.coverage
+**/.pytest_cache
+**/.ruff_cache
+**/.venv
+**/__pycache__
+**/build
+**/coverage.xml
+**/*.egg-info

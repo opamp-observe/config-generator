@@ -1,0 +1,89 @@
+# Licensed under the Apache License, Version 2.0 (the "License");
+# Copyright 2026 opamp.info
+
+[build-system]
+requires = ["hatchling>=1.27"]
+build-backend = "hatchling.build"
+
+[project]
+name = "opamp-config-template-transformer"
+version = "0.2.0"
+description = "Versioned Jinja configuration-fragment transformer for observability tools"
+readme = "readme.md"
+requires-python = ">=3.10"
+license = "Apache-2.0"
+authors = [{ name = "opamp.info" }]
+keywords = ["observability", "configuration", "jinja", "fluent-bit", "opamp"]
+dependencies = [
+  "Jinja2>=3.1,<4",
+  "jsonpath-rfc9535>=0.1,<1",
+  "jsonschema>=4.23,<5",
+  "packaging>=24,<27",
+  "ruamel.yaml>=0.18,<1",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pylint>=3.0",
+  "pytest>=8.0",
+  "pytest-cov>=7.0.0",
+  "ruff>=0.15.0",
+]
+
+[project.scripts]
+obs-config-transformer = "config_template_transformer.cli:main"
+
+[project.urls]
+Repository = "https://github.com/opamp-info/opamp-config-gen"
+Homepage = "https://opamp.info"
+Blog = "https://opamp.info/blog"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/config_template_transformer"]
+
+[tool.pytest.ini_options]
+addopts = "-s --cov=config_template_transformer --cov-report=term-missing --cov-report=xml:coverage.xml --cov-branch"
+testpaths = ["tests"]
+markers = ["system: validates a generated configuration with Fluent Bit"]
+
+[tool.coverage.run]
+branch = true
+source = ["config_template_transformer"]
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = false
+precision = 2
+exclude_lines = ["pragma: no cover", "if __name__ == .__main__.:"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "S"]
+ignore = ["E501"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["config_template_transformer"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**/*.py" = ["S101", "S603", "S607"]
+
+[tool.pylint.main]
+py-version = "3.10"
+
+[tool.pylint.format]
+max-line-length = 100
+
+[tool.pylint."messages control"]
+disable = [
+  "duplicate-code",
+  "too-few-public-methods",
+  "too-many-arguments",
+  "too-many-instance-attributes",
+  "too-many-positional-arguments",
+  "wrong-import-order",
+]
+

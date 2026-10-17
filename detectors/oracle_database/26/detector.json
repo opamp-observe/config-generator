@@ -1,0 +1,45 @@
+{
+  "schema_version": "1.0",
+  "license": "Apache-2.0",
+  "result_schema": "../../../schemas/detectors/oracle_database_26.schema.json",
+  "detector": {
+    "name": "oracle_database_26",
+    "version": "1.1.0"
+  },
+  "product": {
+    "name": "Oracle Database",
+    "version": "26ai (23.26.x)",
+    "release_status": "stable"
+  },
+  "supported_platforms": [
+    "linux",
+    "windows"
+  ],
+  "packs": {
+    "linux": "packs/linux.conf",
+    "windows": "packs/windows.conf"
+  },
+  "documentation": [
+    "https://docs.oracle.com/en/database/oracle/oracle-database/26/rilin/how-oracle-database-uses-the-listener-file-listener-ora.html",
+    "https://docs.oracle.com/en/database/oracle/oracle-database/26/netag/oracle-net-services-log-file-names.html",
+    "https://docs.oracle.com/en/database/oracle/oracle-database/26/netrf/index.html",
+    "https://docs.oracle.com/en/database/oracle/oracle-database/26/ostmg/admin-asm-instance.html",
+    "https://docs.oracle.com/en/database/oracle/oracle-rest-data-services/24.4/ordig/installing-and-configuring-oracle-rest-data-services.html",
+    "https://osquery.readthedocs.io/en/stable/deployment/configuration/",
+    "https://osquery.io/schema/"
+  ],
+  "output_contract": {
+    "required_queries": [
+      "runtime",
+      "network_ports",
+      "configuration_files",
+      "log_locations",
+      "asm_instances"
+    ],
+    "aggregate_key": "oracle_database_26"
+  },
+  "compatibility": {
+    "minimum_osquery_version": "5.0.0"
+  }
+}
+

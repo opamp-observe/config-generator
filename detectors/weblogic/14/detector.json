@@ -1,0 +1,49 @@
+{
+  "schema_version": "1.0",
+  "license": "Apache-2.0",
+  "result_schema": "../../../schemas/detectors/weblogic_14.schema.json",
+  "detector": {
+    "name": "weblogic_14",
+    "version": "1.1.0"
+  },
+  "product": {
+    "name": "Oracle WebLogic Server",
+    "version": "14.1.1",
+    "release_status": "stable"
+  },
+  "supported_platforms": [
+    "linux",
+    "windows"
+  ],
+  "packs": {
+    "linux": "packs/linux.conf",
+    "windows": "packs/windows.conf"
+  },
+  "documentation": [
+    "https://docs.oracle.com/en/middleware/standalone/weblogic-server/14.1.1.0/admrf/weblogicserver.html",
+    "https://docs.oracle.com/en/middleware/standalone/weblogic-server/14.1.1.0/domcf/config_files.html",
+    "https://docs.oracle.com/en/middleware/standalone/weblogic-server/14.1.1.0/wllog/logging_services.html",
+    "https://docs.oracle.com/en/middleware/standalone/weblogic-server/14.1.1.0/depgd/managing.html",
+    "https://docs.oracle.com/en/middleware/standalone/weblogic-server/14.1.1.0/wlrsr/monitor-servers.html",
+    "https://docs.oracle.com/en/java/javase/17/management/monitoring-and-management-using-jmx-technology.html",
+    "https://oracle.github.io/weblogic-kubernetes-operator/managing-domains/domain-lifecycle/liveness-readiness-probe-customization/",
+    "https://osquery.readthedocs.io/en/stable/deployment/configuration/",
+    "https://osquery.io/schema/"
+  ],
+  "output_contract": {
+    "required_queries": [
+      "runtime",
+      "network_ports",
+      "configuration_files",
+      "log_locations",
+      "observability_urls",
+      "jvm_runtime",
+      "java_monitoring_endpoints"
+    ],
+    "aggregate_key": "weblogic_14"
+  },
+  "compatibility": {
+    "minimum_osquery_version": "5.0.0"
+  }
+}
+

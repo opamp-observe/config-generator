@@ -1,0 +1,101 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$comment": "Copyright 2026 opamp.info; licensed under the Apache License, Version 2.0.",
+  "title": "Aggregate osquery detector results",
+  "description": "Validates the complete detector-results.json document emitted by runner.py.",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "generated_at",
+    "host",
+    "detectors"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "1.0"
+    },
+    "generated_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "host": {
+      "type": "object",
+      "required": [
+        "hostname",
+        "operating_system",
+        "platform"
+      ],
+      "properties": {
+        "hostname": {
+          "type": "string"
+        },
+        "operating_system": {
+          "type": "string",
+          "minLength": 1
+        },
+        "platform": {
+          "type": "string",
+          "enum": [
+            "linux",
+            "windows"
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "detectors": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "oneOf": [
+          {
+            "$ref": "detectors/host_inventory_1.schema.json"
+          },
+          {
+            "$ref": "detectors/apache_http_server_1.schema.json"
+          },
+          {
+            "$ref": "detectors/java_app_1.schema.json"
+          },
+          {
+            "$ref": "detectors/nginx_1.schema.json"
+          },
+          {
+            "$ref": "detectors/nodejs_app_1.schema.json"
+          },
+          {
+            "$ref": "detectors/oracle_database_19.schema.json"
+          },
+          {
+            "$ref": "detectors/oracle_database_21.schema.json"
+          },
+          {
+            "$ref": "detectors/oracle_database_26.schema.json"
+          },
+          {
+            "$ref": "detectors/postgresql_17.schema.json"
+          },
+          {
+            "$ref": "detectors/postgresql_18.schema.json"
+          },
+          {
+            "$ref": "detectors/postgresql_19.schema.json"
+          },
+          {
+            "$ref": "detectors/python_app_1.schema.json"
+          },
+          {
+            "$ref": "detectors/sqlite_1.schema.json"
+          },
+          {
+            "$ref": "detectors/weblogic_12.schema.json"
+          },
+          {
+            "$ref": "detectors/weblogic_14.schema.json"
+          }
+        ]
+      }
+    }
+  },
+  "additionalProperties": false
+}

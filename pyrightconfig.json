@@ -1,0 +1,27 @@
+{
+  "reportInvalidTypeForm": "none",
+  "reportMissingImports": "none",
+  "reportMissingModuleSource": "none",
+  "reportMissingTypeStubs": "none",
+  "executionEnvironments": [
+    {
+      "root": ".",
+      "extraPaths": [
+        ".",
+        "shared",
+        "provider/src",
+        "consumer/src"
+      ]
+    },
+    {
+      "root": "provider/tests",
+      "extraPaths": [
+        ".",
+        "shared",
+        "provider/src"
+      ]
+    }
+  ]
+}
+
+

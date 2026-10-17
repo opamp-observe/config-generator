@@ -1,0 +1,47 @@
+{
+  "schema_version": "1.0",
+  "license": "Apache-2.0",
+  "result_schema": "../../../schemas/detectors/nginx_1.schema.json",
+  "detector": {
+    "name": "nginx_1",
+    "version": "1.0.0"
+  },
+  "product": {
+    "name": "NGINX",
+    "version": "any",
+    "release_status": "stable"
+  },
+  "supported_platforms": [
+    "linux",
+    "windows"
+  ],
+  "packs": {
+    "linux": "packs/linux.conf",
+    "windows": "packs/windows.conf"
+  },
+  "documentation": [
+    "https://nginx.org/en/docs/switches.html",
+    "https://nginx.org/en/docs/configure.html",
+    "https://nginx.org/en/docs/http/ngx_http_log_module.html",
+    "https://nginx.org/en/docs/ngx_core_module.html#error_log",
+    "https://nginx.org/en/docs/syslog.html",
+    "https://nginx.org/en/docs/http/ngx_http_stub_status_module.html",
+    "https://osquery.io/schema/"
+  ],
+  "output_contract": {
+    "required_queries": [
+      "runtime",
+      "network_ports",
+      "configuration_files",
+      "log_locations",
+      "metrics_outputs",
+      "service_state",
+      "unique_identifiers",
+      "version_evidence"
+    ],
+    "aggregate_key": "nginx_1"
+  },
+  "compatibility": {
+    "minimum_osquery_version": "5.0.0"
+  }
+}

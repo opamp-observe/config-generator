@@ -1,0 +1,45 @@
+{
+  "schema_version": "1.0",
+  "license": "Apache-2.0",
+  "result_schema": "../../../schemas/detectors/host_inventory_1.schema.json",
+  "detector": {
+    "name": "host_inventory_1",
+    "version": "1.0.0"
+  },
+  "product": {
+    "name": "Host Inventory",
+    "version": "1",
+    "release_status": "stable"
+  },
+  "supported_platforms": [
+    "linux",
+    "windows"
+  ],
+  "packs": {
+    "linux": "packs/linux.conf",
+    "windows": "packs/windows.conf"
+  },
+  "documentation": [
+    "https://github.com/osquery/osquery/blob/master/specs/system_info.table",
+    "https://github.com/osquery/osquery/blob/master/specs/os_version.table",
+    "https://github.com/osquery/osquery/blob/master/specs/interface_addresses.table",
+    "https://github.com/osquery/osquery/blob/master/specs/processes.table",
+    "https://github.com/osquery/osquery/blob/master/specs/logged_in_users.table",
+    "https://github.com/osquery/osquery/blob/master/specs/users.table",
+    "https://github.com/osquery/osquery/blob/master/specs/groups.table"
+  ],
+  "output_contract": {
+    "required_queries": [
+      "host_identity",
+      "network_ips",
+      "deployment_environment",
+      "execution_identity",
+      "user_roles"
+    ],
+    "aggregate_key": "host_inventory_1"
+  },
+  "compatibility": {
+    "minimum_osquery_version": "5.0.0"
+  }
+}
+

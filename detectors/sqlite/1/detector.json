@@ -1,0 +1,45 @@
+{
+  "schema_version": "1.0",
+  "license": "Apache-2.0",
+  "result_schema": "../../../schemas/detectors/sqlite_1.schema.json",
+  "detector": {
+    "name": "sqlite_1",
+    "version": "1.0.0"
+  },
+  "product": {
+    "name": "SQLite",
+    "version": "3.x or embedded",
+    "release_status": "stable"
+  },
+  "supported_platforms": [
+    "linux",
+    "windows"
+  ],
+  "packs": {
+    "linux": "packs/linux.conf",
+    "windows": "packs/windows.conf"
+  },
+  "documentation": [
+    "https://sqlite.org/fileformat.html",
+    "https://sqlite.org/wal.html",
+    "https://sqlite.org/tempfiles.html",
+    "https://sqlite.org/cli.html",
+    "https://osquery.io/schema/"
+  ],
+  "output_contract": {
+    "required_queries": [
+      "runtime",
+      "network_ports",
+      "configuration_files",
+      "log_locations",
+      "metrics_outputs",
+      "service_state",
+      "unique_identifiers",
+      "version_evidence"
+    ],
+    "aggregate_key": "sqlite_1"
+  },
+  "compatibility": {
+    "minimum_osquery_version": "5.0.0"
+  }
+}

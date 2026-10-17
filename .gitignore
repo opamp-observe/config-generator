@@ -1,0 +1,74 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Distribution / packaging
+build/
+dist/
+*.egg-info/
+
+# Virtual environments
+.venv/
+venv/
+
+# Tool caches
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+.flake8
+coverage.xml
+
+tools
+
+/catalog-service/node_modules/
+/config-service/reports/
+config-service/frontend/node_modules/
+/config-service/node_modules/
+/config-service/backups/
+/svr-credentials-mgr/node_modules/
+/provider/node_modules/
+
+
+# Editors / OS
+.vscode/
+.idea/
+.DS_Store
+*.code-workspace
+
+agent.md
+
+#Test artefacts
+consumer/test.txt
+OpAMPSupervisor.signal
+*.pem
+*.pub
+*.key
+test.txt
+server-state/
+*.log
+dev-tools/runtime/
+stopclaude.bat
+svr-credentials-mgr/*.jsonl
+svr-credentials-mgr/test-results/
+agent_broker/.env
+cloud/aws/*.local.env
+
+
+# Documentation
+docs/screenshots/
+dev-notes/
+*.backup*
+
+# definitions
+proto/anyvalue.proto
+proto/opamp.proto
+cli/runtime/
+
+*.meta
+
+agents.md
+
+

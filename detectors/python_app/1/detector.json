@@ -1,0 +1,48 @@
+{
+  "schema_version": "1.0",
+  "license": "Apache-2.0",
+  "result_schema": "../../../schemas/detectors/python_app_1.schema.json",
+  "detector": {
+    "name": "python_app_1",
+    "version": "1.0.0"
+  },
+  "product": {
+    "name": "Python Application",
+    "version": "any",
+    "release_status": "stable"
+  },
+  "supported_platforms": [
+    "linux",
+    "windows"
+  ],
+  "packs": {
+    "linux": "packs/linux.conf",
+    "windows": "packs/windows.conf"
+  },
+  "documentation": [
+    "https://docs.python.org/3/howto/logging.html",
+    "https://docs.python.org/3/library/logging.handlers.html",
+    "https://gunicorn.org/reference/settings/",
+    "https://gunicorn.org/instrumentation/",
+    "https://uvicorn.dev/settings/",
+    "https://opentelemetry.io/docs/zero-code/python/configuration/",
+    "https://opentelemetry.io/docs/specs/otel/configuration/sdk-environment-variables/",
+    "https://osquery.io/schema/"
+  ],
+  "output_contract": {
+    "required_queries": [
+      "runtime",
+      "network_ports",
+      "configuration_files",
+      "log_locations",
+      "metrics_outputs",
+      "service_state",
+      "unique_identifiers",
+      "version_evidence"
+    ],
+    "aggregate_key": "python_app_1"
+  },
+  "compatibility": {
+    "minimum_osquery_version": "5.0.0"
+  }
+}

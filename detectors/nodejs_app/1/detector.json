@@ -1,0 +1,46 @@
+{
+  "schema_version": "1.0",
+  "license": "Apache-2.0",
+  "result_schema": "../../../schemas/detectors/nodejs_app_1.schema.json",
+  "detector": {
+    "name": "nodejs_app_1",
+    "version": "1.0.0"
+  },
+  "product": {
+    "name": "Node.js Application",
+    "version": "any",
+    "release_status": "stable"
+  },
+  "supported_platforms": [
+    "linux",
+    "windows"
+  ],
+  "packs": {
+    "linux": "packs/linux.conf",
+    "windows": "packs/windows.conf"
+  },
+  "documentation": [
+    "https://nodejs.org/api/cli.html",
+    "https://nodejs.org/api/report.html",
+    "https://opentelemetry.io/docs/languages/js/exporters/",
+    "https://opentelemetry.io/docs/languages/js/resources/",
+    "https://opentelemetry.io/docs/specs/otel/configuration/sdk-environment-variables/",
+    "https://osquery.io/schema/"
+  ],
+  "output_contract": {
+    "required_queries": [
+      "runtime",
+      "network_ports",
+      "configuration_files",
+      "log_locations",
+      "metrics_outputs",
+      "service_state",
+      "unique_identifiers",
+      "version_evidence"
+    ],
+    "aggregate_key": "nodejs_app_1"
+  },
+  "compatibility": {
+    "minimum_osquery_version": "5.0.0"
+  }
+}

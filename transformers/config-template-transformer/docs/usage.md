@@ -1,0 +1,123 @@
+<!--
+Copyright 2026 opamp.info
+Licensed under the Apache License, Version 2.0.
+-->
+
+# Configuration transformer usage
+
+The transformer separates discovery, rendering, and parent-configuration
+mutation. It accepts aggregate detector JSON, applies versioned YAML transform
+definitions, renders approved Jinja templates, and writes a checksummed JSON
+manifest. The separate injection command verifies those checksums before it
+adds literal include paths to a parent configuration.
+
+## Install in the component virtual environment
+
+From `transformers/config-template-transformer`:
+
+```powershell
+py -3 -m venv .venv
+.\.venv\Scripts\python.exe -m pip install -e ".[dev]"
+```
+
+The environment belongs only to this component. Runtime and development
+dependencies are declared in `pyproject.toml`.
+
+## Render the Fluent Bit example
+
+```powershell
+.\.venv\Scripts\obs-config-transformer.exe render `
+  --detector-results examples/detector_results.json `
+  --definition examples/transforms/nginx_1_logs.yaml `
+  --output-root build `
+  --manifest-output build/orchestration.json `
+  --target-version 4.2.0
+```
+
+This writes `build/generated/nginx_1.inputs.yaml` and
+`build/orchestration.json`. The manifest identifies the generator, target,
+detector and transform versions; the template name, API version, version and
+digest; the artifact digest; and the literal include instruction.
+
+Stable empty fragments are generated if a detector is absent, not detected,
+or contains errors. This prevents a parent include from retaining stale input
+plugins.
+
+## Inject includes into a parent
+
+```powershell
+.\.venv\Scripts\obs-config-transformer.exe inject `
+  --manifest build/orchestration.json `
+  --artifact-root build `
+  --parent-config examples/fluent_bit_parent.yaml `
+  --output build/fluent-bit.yaml
+```
+
+The injected Fluent Bit YAML uses its top-level `includes` list. Existing
+entries and comments are retained, and duplicate paths are not added.
+
+Validate the assembled result with Fluent Bit 4.2 or newer:
+
+```powershell
+fluent-bit --config build/fluent-bit.yaml --dry-run
+```
+
+The optional system test uses the official container image when it is already
+available locally:
+
+```powershell
+docker pull fluent/fluent-bit:4.2
+.\.venv\Scripts\python.exe -m pytest -q -s -m system
+```
+
+The include path is interpreted relative to the parent configuration by
+Fluent Bit. Keep the generated directory beside the assembled parent, or use
+an include path appropriate for the final deployment layout.
+
+## Define another transform
+
+Each transform definition declares:
+
+- a versioned definition identity;
+- detector and target version constraints;
+- an artifact path and literal deployment include path;
+- Jinja template version and context API version;
+- the template metadata sidecar that declares supported capabilities, signals,
+  observability tool, and tool-version range;
+- RFC 9535 JSONPath rules that select detector results and emit normalized
+  plugin objects.
+
+Definitions can be repeated with `--definition`. One manifest intentionally
+targets one tool, while each generated artifact stays independent.
+
+The transform's template path, version, context API, and target are checked
+against the independently validated sidecar before rendering. The requested
+`--target-version` must satisfy both the transform and template ranges. See the
+[template metadata contract](template_metadata.md) for the schema, field
+semantics, versioning policy, compatibility checks, and extension workflow.
+
+## Add another observability tool
+
+The selection, JSONPath, versioning, sandboxing, atomic-write, and manifest
+logic is target-neutral. To support another tool from
+`universal-obs-agent-installer/spec.md`, implement the `TargetAdapter` contract
+in `adapters.py` with:
+
+- a stable tool name and configuration media type;
+- structural validation and serialization of rendered fragments;
+- the target's parent composition mechanism.
+
+This extension point covers Fluentd includes, Vector configuration composition,
+OpenTelemetry Collector configuration, Telegraf includes, Elastic Agent policy
+fragments, and Filebeat configuration without changing detector selection or
+the JSON orchestration contract. A target-specific Jinja template and transform
+definition provide the target syntax and normalized plugin properties.
+
+## Safety and failure behavior
+
+Jinja runs in an immutable sandbox with strict undefined variables. Definitions
+and manifests are JSON Schema validated; paths cannot escape their configured
+roots; detector and target versions must satisfy their declared constraints;
+render size and plugin counts are bounded; artifacts are written atomically;
+and injection refuses missing or modified artifacts. Logging defaults to DEBUG,
+and expected errors return a non-zero status without a traceback.

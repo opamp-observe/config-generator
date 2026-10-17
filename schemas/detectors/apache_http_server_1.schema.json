@@ -1,0 +1,44 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$comment": "Copyright 2026 opamp.info; licensed under the Apache License, Version 2.0.",
+  "title": "Apache HTTP Server generic detector result",
+  "description": "Validates one apache_http_server_1 result emitted by runner.py.",
+  "type": "object",
+  "required": ["detector_name", "detector_version", "product", "product_version", "release_status", "platform", "detected", "discovery_evidence", "queries", "errors"],
+  "properties": {
+    "detector_name": {"const": "apache_http_server_1", "description": "Stable detector identifier."},
+    "detector_version": {"const": "1.0.0", "description": "Detector logic version."},
+    "product": {"const": "Apache HTTP Server"},
+    "product_version": {"const": "any"},
+    "release_status": {"const": "stable"},
+    "platform": {"type": "string", "enum": ["linux", "windows"]},
+    "detected": {"type": "boolean"},
+    "discovery_evidence": {"type": "array", "items": {"$ref": "#/$defs/discovery_evidence"}},
+    "queries": {
+      "type": "object",
+      "properties": {
+        "runtime": {"type": "array", "items": {"$ref": "#/$defs/osquery_row"}},
+        "network_ports": {"type": "array", "items": {"$ref": "#/$defs/osquery_row"}},
+        "configuration_files": {"type": "array", "items": {"$ref": "#/$defs/osquery_row"}},
+        "log_locations": {"type": "array", "items": {"$ref": "#/$defs/osquery_row"}},
+        "metrics_outputs": {"type": "array", "items": {"$ref": "#/$defs/osquery_row"}},
+        "service_state": {"type": "array", "items": {"$ref": "#/$defs/osquery_row"}},
+        "unique_identifiers": {"type": "array", "items": {"$ref": "#/$defs/osquery_row"}},
+        "version_evidence": {"type": "array", "items": {"$ref": "#/$defs/osquery_row"}}
+      },
+      "additionalProperties": false
+    },
+    "errors": {"type": "array", "items": {"type": "string", "minLength": 1}}
+  },
+  "allOf": [{"if": {"properties": {"detected": {"const": true}}, "required": ["detected"]}, "then": {"properties": {"queries": {"required": ["runtime", "network_ports", "configuration_files", "log_locations", "metrics_outputs", "service_state", "unique_identifiers", "version_evidence"]}}}}],
+  "additionalProperties": false,
+  "$defs": {
+    "osquery_row": {"type": "object", "description": "A flat osquery JSON row.", "additionalProperties": {"type": "string"}},
+    "discovery_evidence": {
+      "type": "object",
+      "required": ["query", "rows"],
+      "properties": {"query": {"type": "string", "minLength": 1}, "rows": {"type": "array", "items": {"$ref": "#/$defs/osquery_row"}}},
+      "additionalProperties": false
+    }
+  }
+}

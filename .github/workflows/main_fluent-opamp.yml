@@ -1,0 +1,391 @@
+# Copyright 2026 mp3monster.org
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+name: Build and optionally deploy Fluent OpAMP
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+    inputs:
+      cloud_provider:
+        description: Cloud deployment target; configured uses the CLOUD_PROVIDER repository variable
+        required: true
+        default: configured
+        type: choice
+        options:
+          - configured
+          - azure
+          - aws
+          - none
+
+jobs:
+  select_cloud_provider:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      cloud_provider: ${{ steps.select_provider.outputs.cloud_provider }}
+    steps:
+      - name: Select and validate cloud provider
+        id: select_provider
+        shell: bash
+        env:
+          CONFIGURED_CLOUD_PROVIDER: ${{ vars.CLOUD_PROVIDER || '' }}
+          DEFAULT_CLOUD_PROVIDER: ${{ github.event_name == 'push' && 'aws' || 'none' }}
+          REQUESTED_CLOUD_PROVIDER: ${{ inputs.cloud_provider || 'configured' }}
+        run: |
+          set -euo pipefail
+          cloud_provider="$REQUESTED_CLOUD_PROVIDER"
+          if [[ "$cloud_provider" == "configured" ]]; then
+            cloud_provider="$CONFIGURED_CLOUD_PROVIDER"
+          fi
+          if [[ -z "$cloud_provider" ]]; then
+            cloud_provider="$DEFAULT_CLOUD_PROVIDER"
+          fi
+          cloud_provider="${cloud_provider,,}"
+          case "$cloud_provider" in
+            azure|aws|none) ;;
+            *)
+              echo "CLOUD_PROVIDER must be azure, aws, or none; received: $cloud_provider" >&2
+              exit 1
+              ;;
+          esac
+          echo "cloud_provider=$cloud_provider" >> "$GITHUB_OUTPUT"
+          echo "Selected cloud provider: $cloud_provider" >> "$GITHUB_STEP_SUMMARY"
+
+  build:
+    runs-on: ubuntu-latest
+    needs: select_cloud_provider
+    permissions:
+      contents: read
+    steps:
+      - name: Check out repository
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          checkout_auth_header="$(
+            printf 'x-access-token:%s' "$GITHUB_TOKEN" \
+              | python3 -c 'import base64, sys; print(base64.b64encode(sys.stdin.buffer.read()).decode())'
+          )"
+          git init --initial-branch=main "$GITHUB_WORKSPACE"
+          git -C "$GITHUB_WORKSPACE" remote add origin "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY.git"
+          git -C "$GITHUB_WORKSPACE" \
+            -c http.https://github.com/.extraheader="AUTHORIZATION: basic $checkout_auth_header" \
+            fetch --depth=1 origin "$GITHUB_SHA"
+          git -C "$GITHUB_WORKSPACE" checkout --force FETCH_HEAD
+
+      # Keep the build active for all modes, including none, so disabling cloud
+      # deployment does not disable basic dependency and packaging validation.
+      - name: Create virtual environment and install dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m venv antenv
+          source antenv/bin/activate
+          python3 -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+  deploy_azure:
+    runs-on: ubuntu-latest
+    needs:
+      - select_cloud_provider
+      - build
+    if: needs.select_cloud_provider.outputs.cloud_provider == 'azure'
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - name: Check out repository
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          checkout_auth_header="$(
+            printf 'x-access-token:%s' "$GITHUB_TOKEN" \
+              | python3 -c 'import base64, sys; print(base64.b64encode(sys.stdin.buffer.read()).decode())'
+          )"
+          git init --initial-branch=main "$GITHUB_WORKSPACE"
+          git -C "$GITHUB_WORKSPACE" remote add origin "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY.git"
+          git -C "$GITHUB_WORKSPACE" \
+            -c http.https://github.com/.extraheader="AUTHORIZATION: basic $checkout_auth_header" \
+            fetch --depth=1 origin "$GITHUB_SHA"
+          git -C "$GITHUB_WORKSPACE" checkout --force FETCH_HEAD
+
+      - name: Log in to Azure through OIDC
+        shell: bash
+        env:
+          AZURE_CLIENT_ID: ${{ secrets.AZUREAPPSERVICE_CLIENTID_195EE0A2DA3947CAA0427043CC5FEEFF }}
+          AZURE_TENANT_ID: ${{ secrets.AZUREAPPSERVICE_TENANTID_40CBF888FD894E9EA2D20C44941831DC }}
+          AZURE_SUBSCRIPTION_ID: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_F23BE392CBB5496182D244751F520677 }}
+        run: |
+          set -euo pipefail
+          [[ -n "$AZURE_CLIENT_ID" ]] || { echo "Azure client id secret is required" >&2; exit 1; }
+          [[ -n "$AZURE_TENANT_ID" ]] || { echo "Azure tenant id secret is required" >&2; exit 1; }
+          [[ -n "$AZURE_SUBSCRIPTION_ID" ]] || { echo "Azure subscription id secret is required" >&2; exit 1; }
+          azure_oidc_token="$(
+            curl -fsS \
+              -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
+              "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=api://AzureADTokenExchange" \
+              | python3 -c 'import json, sys; print(json.load(sys.stdin)["value"])'
+          )"
+          az login \
+            --service-principal \
+            --username "$AZURE_CLIENT_ID" \
+            --tenant "$AZURE_TENANT_ID" \
+            --federated-token "$azure_oidc_token" \
+            --allow-no-subscriptions
+          az account set --subscription "$AZURE_SUBSCRIPTION_ID"
+
+      - name: Deploy to Azure Web App
+        shell: bash
+        env:
+          AZURE_APP_NAME: ${{ vars.AZURE_APP_NAME || 'fluent-opamp' }}
+          AZURE_RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP }}
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+          git archive --format=zip --output=dist/python-app.zip HEAD
+          resource_group="$AZURE_RESOURCE_GROUP"
+          if [[ -z "$resource_group" ]]; then
+            resource_group="$(
+              az webapp list \
+                --query "[?name=='$AZURE_APP_NAME'].resourceGroup | [0]" \
+                --output tsv
+            )"
+          fi
+          [[ -n "$resource_group" ]] || { echo "Azure resource group could not be resolved" >&2; exit 1; }
+          az webapp deploy \
+            --resource-group "$resource_group" \
+            --name "$AZURE_APP_NAME" \
+            --src-path dist/python-app.zip \
+            --type zip
+
+  deploy_aws:
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    needs:
+      - select_cloud_provider
+      - build
+    if: needs.select_cloud_provider.outputs.cloud_provider == 'aws'
+    permissions:
+      id-token: write
+      contents: read
+    env:
+      AWS_REGION: ${{ vars.AWS_REGION || 'eu-west-2' }}
+      STACK_NAME: ${{ vars.AWS_STACK_NAME || 'opamp-regression' }}
+    steps:
+      - name: Validate AWS repository configuration
+        shell: bash
+        env:
+          ADMIN_SOURCE_CIDR: ${{ vars.AWS_ADMIN_SOURCE_CIDR }}
+          AWS_ROLE_TO_ASSUME: ${{ secrets.AWS_ROLE_TO_ASSUME }}
+          KEY_NAME: ${{ vars.AWS_KEY_NAME }}
+        run: |
+          set -euo pipefail
+          missing_configuration=0
+          [[ -n "$AWS_ROLE_TO_ASSUME" ]] || { echo "AWS_ROLE_TO_ASSUME repository secret is required for AWS mode" >&2; missing_configuration=1; }
+          [[ -n "$KEY_NAME" ]] || { echo "AWS_KEY_NAME repository variable is required for AWS mode" >&2; missing_configuration=1; }
+          [[ -n "$ADMIN_SOURCE_CIDR" ]] || { echo "AWS_ADMIN_SOURCE_CIDR repository variable is required for AWS mode" >&2; missing_configuration=1; }
+          if [[ "$missing_configuration" -ne 0 ]]; then
+            echo "Set CLOUD_PROVIDER to none to keep main-branch pushes build-only until AWS OIDC is configured." >&2
+            exit 1
+          fi
+
+      - name: Check out repository
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          checkout_auth_header="$(
+            printf 'x-access-token:%s' "$GITHUB_TOKEN" \
+              | python3 -c 'import base64, sys; print(base64.b64encode(sys.stdin.buffer.read()).decode())'
+          )"
+          git init --initial-branch=main "$GITHUB_WORKSPACE"
+          git -C "$GITHUB_WORKSPACE" remote add origin "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY.git"
+          git -C "$GITHUB_WORKSPACE" \
+            -c http.https://github.com/.extraheader="AUTHORIZATION: basic $checkout_auth_header" \
+            fetch --depth=1 origin "$GITHUB_SHA"
+          git -C "$GITHUB_WORKSPACE" checkout --force FETCH_HEAD
+
+      - name: Configure AWS credentials through OIDC
+        shell: bash
+        env:
+          AWS_ROLE_TO_ASSUME: ${{ secrets.AWS_ROLE_TO_ASSUME }}
+        run: |
+          set -euo pipefail
+          aws_oidc_token="$(
+            curl -fsS \
+              -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
+              "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=sts.amazonaws.com" \
+              | python3 -c 'import json, sys; print(json.load(sys.stdin)["value"])'
+          )"
+          read -r aws_access_key_id aws_secret_access_key aws_session_token < <(
+            aws sts assume-role-with-web-identity \
+              --role-arn "$AWS_ROLE_TO_ASSUME" \
+              --role-session-name "opamp-$GITHUB_RUN_ID" \
+              --web-identity-token "$aws_oidc_token" \
+              --duration-seconds 3600 \
+              --query 'Credentials.[AccessKeyId,SecretAccessKey,SessionToken]' \
+              --output text
+          )
+          {
+            echo "::add-mask::$aws_access_key_id"
+            echo "::add-mask::$aws_secret_access_key"
+            echo "::add-mask::$aws_session_token"
+          }
+          {
+            echo "AWS_ACCESS_KEY_ID=$aws_access_key_id"
+            echo "AWS_SECRET_ACCESS_KEY=$aws_secret_access_key"
+            echo "AWS_SESSION_TOKEN=$aws_session_token"
+            echo "AWS_DEFAULT_REGION=$AWS_REGION"
+          } >> "$GITHUB_ENV"
+
+      - name: Validate AWS deployment controls
+        shell: bash
+        env:
+          ADMIN_SOURCE_CIDR: ${{ vars.AWS_ADMIN_SOURCE_CIDR }}
+          KEY_NAME: ${{ vars.AWS_KEY_NAME }}
+        run: |
+          set -euo pipefail
+          [[ -n "$KEY_NAME" ]] || { echo "AWS_KEY_NAME repository variable is required for AWS mode" >&2; exit 1; }
+          [[ -n "$ADMIN_SOURCE_CIDR" ]] || { echo "AWS_ADMIN_SOURCE_CIDR repository variable is required for AWS mode" >&2; exit 1; }
+
+      - name: Create AWS parameter file
+        shell: bash
+        env:
+          ADMIN_SOURCE_CIDR: ${{ vars.AWS_ADMIN_SOURCE_CIDR }}
+          INSTANCE_TYPE: ${{ vars.AWS_INSTANCE_TYPE || 't3.small' }}
+          KEY_NAME: ${{ vars.AWS_KEY_NAME }}
+          NAME_PREFIX: ${{ vars.AWS_NAME_PREFIX || 'opamp' }}
+        run: |
+          set -euo pipefail
+          printf '%s\n' \
+            "NamePrefix=$NAME_PREFIX" \
+            "KeyName=$KEY_NAME" \
+            "AdminSourceCidr=$ADMIN_SOURCE_CIDR" \
+            "InstanceType=$INSTANCE_TYPE" \
+            "VpcCidr=10.42.0.0/16" \
+            "PublicSubnetCidr=10.42.0.0/24" \
+            "ServerPrivateIp=10.42.0.10" \
+            "ConsumerPrivateIp=10.42.0.20" \
+            "KeycloakAdminUser=admin" \
+            > cloud/aws/parameters.workflow.env
+
+      - name: Package and deploy AWS stack
+        shell: bash
+        env:
+          ARTIFACT_BUCKET: ${{ vars.AWS_ARTIFACT_BUCKET }}
+          CLOUDFORMATION_ROLE_ARN: ${{ secrets.AWS_CLOUDFORMATION_ROLE_ARN }}
+          PARAMETERS_FILE: cloud/aws/parameters.workflow.env
+        run: bash cloud/aws/deploy.sh
+
+      - name: Run and retain AWS regression
+        id: aws_regression
+        shell: bash
+        env:
+          AWS_REGRESSION_CONTINUE_ON_FAILURE: ${{ vars.AWS_REGRESSION_CONTINUE_ON_FAILURE || 'false' }}
+          AWS_REGRESSION_ONLY: ${{ vars.AWS_REGRESSION_ONLY }}
+          AWS_REGRESSION_SKIP: ${{ vars.AWS_REGRESSION_SKIP }}
+        run: |
+          set -uo pipefail
+          regression_arguments=(--provider aws --aws-region "$AWS_REGION")
+          for test_id in $AWS_REGRESSION_ONLY; do
+            regression_arguments+=(--only "$test_id")
+          done
+          for test_id in $AWS_REGRESSION_SKIP; do
+            regression_arguments+=(--skip "$test_id")
+          done
+          if [[ "${AWS_REGRESSION_CONTINUE_ON_FAILURE,,}" == "true" ]]; then
+            regression_arguments+=(--continue-on-failure)
+          fi
+          set +e
+          python3 cloud/run_regression.py "${regression_arguments[@]}"
+          regression_exit_code=$?
+          set -e
+          echo "exit_code=$regression_exit_code" >> "$GITHUB_OUTPUT"
+          exit 0
+
+      - name: Summarize retained AWS storage
+        if: always() && steps.aws_regression.outputs.exit_code != ''
+        shell: bash
+        run: |
+          set -euo pipefail
+          retained_bucket="$(cat dist/aws-artifact-bucket.txt)"
+          connection_guide="$(find dist/aws-regression-results -name connection_details.md -type f | sort | tail -n 1)"
+          regression_report="$(find dist/test-reports -name regression-pack-results.md -type f | sort | tail -n 1)"
+          {
+            cat "$connection_guide"
+            echo ""
+            echo "## Retained AWS storage"
+            echo ""
+            echo "Bucket: \`$retained_bucket\`"
+            if [[ -n "$regression_report" ]]; then
+              echo ""
+              cat "$regression_report"
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Fail when AWS regression or evidence upload failed
+        if: steps.aws_regression.outputs.exit_code != '0'
+        shell: bash
+        run: |
+          set -euo pipefail
+          failure_exit_code="${{ steps.aws_regression.outputs.exit_code }}"
+          regression_report="$(
+            { find dist/test-reports -name regression-pack-results.md -type f 2>/dev/null || true; } \
+              | sort \
+              | tail -n 1
+          )"
+          upload_manifest="$(
+            { find dist/test-reports -name cloud_upload_manifest.json -type f 2>/dev/null || true; } \
+              | sort \
+              | tail -n 1
+          )"
+          if [[ -n "$regression_report" && -f "$regression_report" ]] \
+            && grep -q '^Overall: passed' "$regression_report"; then
+            echo "AWS regression passed, but retained evidence upload failed with exit code $failure_exit_code" >&2
+          else
+            echo "AWS regression failed with exit code $failure_exit_code" >&2
+          fi
+          if [[ -n "$regression_report" && -f "$regression_report" ]]; then
+            echo "AWS regression report: $regression_report" >&2
+            cat "$regression_report" >&2
+          else
+            echo "No regression-pack-results.md file was found under dist/test-reports." >&2
+            find dist/test-reports -maxdepth 4 -type f -print >&2 || true
+          fi
+          if [[ -n "$upload_manifest" && -f "$upload_manifest" ]]; then
+            echo "AWS regression upload manifest: $upload_manifest" >&2
+            cat "$upload_manifest" >&2
+          fi
+          exit "$failure_exit_code"
+
+  no_cloud_deployment:
+    runs-on: ubuntu-latest
+    needs:
+      - select_cloud_provider
+      - build
+    if: needs.select_cloud_provider.outputs.cloud_provider == 'none'
+    permissions:
+      contents: read
+    steps:
+      - name: Record skipped cloud deployment
+        shell: bash
+        run: echo "Build completed without a cloud deployment." >> "$GITHUB_STEP_SUMMARY"
+
+

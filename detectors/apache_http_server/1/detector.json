@@ -1,0 +1,46 @@
+{
+  "schema_version": "1.0",
+  "license": "Apache-2.0",
+  "result_schema": "../../../schemas/detectors/apache_http_server_1.schema.json",
+  "detector": {
+    "name": "apache_http_server_1",
+    "version": "1.0.0"
+  },
+  "product": {
+    "name": "Apache HTTP Server",
+    "version": "any",
+    "release_status": "stable"
+  },
+  "supported_platforms": [
+    "linux",
+    "windows"
+  ],
+  "packs": {
+    "linux": "packs/linux.conf",
+    "windows": "packs/windows.conf"
+  },
+  "documentation": [
+    "https://httpd.apache.org/docs/2.4/programs/httpd.html",
+    "https://httpd.apache.org/docs/2.4/mod/core.html#errorlog",
+    "https://httpd.apache.org/docs/2.4/mod/mod_log_config.html",
+    "https://httpd.apache.org/docs/2.4/mod/mpm_common.html#pidfile",
+    "https://httpd.apache.org/docs/2.4/mod/mod_status.html",
+    "https://osquery.io/schema/"
+  ],
+  "output_contract": {
+    "required_queries": [
+      "runtime",
+      "network_ports",
+      "configuration_files",
+      "log_locations",
+      "metrics_outputs",
+      "service_state",
+      "unique_identifiers",
+      "version_evidence"
+    ],
+    "aggregate_key": "apache_http_server_1"
+  },
+  "compatibility": {
+    "minimum_osquery_version": "5.0.0"
+  }
+}

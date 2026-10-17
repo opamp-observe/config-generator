@@ -1,0 +1,42 @@
+{
+  "schema_version": "1.0",
+  "license": "Apache-2.0",
+  "result_schema": "../../../schemas/detectors/postgresql_17.schema.json",
+  "detector": {
+    "name": "postgresql_17",
+    "version": "1.0.0"
+  },
+  "product": {
+    "name": "PostgreSQL",
+    "version": "17",
+    "release_status": "stable"
+  },
+  "supported_platforms": [
+    "linux",
+    "windows"
+  ],
+  "packs": {
+    "linux": "packs/linux.conf",
+    "windows": "packs/windows.conf"
+  },
+  "documentation": [
+    "https://www.postgresql.org/docs/17/runtime-config-file-locations.html",
+    "https://www.postgresql.org/docs/17/app-postgres.html",
+    "https://www.postgresql.org/docs/17/storage-file-layout.html",
+    "https://osquery.readthedocs.io/en/stable/deployment/configuration/",
+    "https://osquery.io/schema/"
+  ],
+  "output_contract": {
+    "required_queries": [
+      "runtime",
+      "network_ports",
+      "configuration_files",
+      "log_locations"
+    ],
+    "aggregate_key": "postgresql_17"
+  },
+  "compatibility": {
+    "minimum_osquery_version": "5.0.0"
+  }
+}
+

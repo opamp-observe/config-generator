@@ -1,0 +1,45 @@
+{
+  "schema_version": "1.0",
+  "license": "Apache-2.0",
+  "result_schema": "../../../schemas/detectors/oracle_database_19.schema.json",
+  "detector": {
+    "name": "oracle_database_19",
+    "version": "1.1.0"
+  },
+  "product": {
+    "name": "Oracle Database",
+    "version": "19c",
+    "release_status": "stable"
+  },
+  "supported_platforms": [
+    "linux",
+    "windows"
+  ],
+  "packs": {
+    "linux": "packs/linux.conf",
+    "windows": "packs/windows.conf"
+  },
+  "documentation": [
+    "https://docs.oracle.com/en/database/oracle/oracle-database/19/refrn/DIAGNOSTIC_DEST.html",
+    "https://docs.oracle.com/en/database/oracle/oracle-database/19/refrn/SPFILE.html",
+    "https://docs.oracle.com/en/database/oracle/oracle-database/19/netrf/oracle-net-listener-parameters-in-listener-ora.html",
+    "https://docs.oracle.com/en/database/oracle/oracle-database/19/ostmg/asm-instance.html",
+    "https://docs.oracle.com/en/database/oracle/oracle-rest-data-services/24.4/ordig/installing-and-configuring-oracle-rest-data-services.html",
+    "https://osquery.readthedocs.io/en/stable/deployment/configuration/",
+    "https://osquery.io/schema/"
+  ],
+  "output_contract": {
+    "required_queries": [
+      "runtime",
+      "network_ports",
+      "configuration_files",
+      "log_locations",
+      "asm_instances"
+    ],
+    "aggregate_key": "oracle_database_19"
+  },
+  "compatibility": {
+    "minimum_osquery_version": "5.0.0"
+  }
+}
+

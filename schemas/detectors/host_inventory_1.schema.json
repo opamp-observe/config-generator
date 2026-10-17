@@ -1,0 +1,159 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$comment": "Copyright 2026 opamp.info; licensed under the Apache License, Version 2.0.",
+  "title": "Host Inventory 1 detector result",
+  "description": "Validates one host_inventory_1 result emitted by runner.py.",
+  "type": "object",
+  "required": [
+    "detector_name",
+    "detector_version",
+    "product",
+    "product_version",
+    "release_status",
+    "platform",
+    "detected",
+    "discovery_evidence",
+    "queries",
+    "errors"
+  ],
+  "properties": {
+    "detector_name": {
+      "const": "host_inventory_1",
+      "description": "Stable detector identifier."
+    },
+    "detector_version": {
+      "const": "1.0.0",
+      "description": "Version of the detector logic that produced this result."
+    },
+    "product": {
+      "const": "Host Inventory"
+    },
+    "product_version": {
+      "const": "1"
+    },
+    "release_status": {
+      "const": "stable"
+    },
+    "platform": {
+      "type": "string",
+      "enum": [
+        "linux",
+        "windows"
+      ]
+    },
+    "detected": {
+      "type": "boolean"
+    },
+    "discovery_evidence": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/discovery_evidence"
+      }
+    },
+    "queries": {
+      "type": "object",
+      "properties": {
+        "host_identity": {
+          "type": "array",
+          "description": "Rows returned by the host_identity osquery pack query.",
+          "items": {
+            "$ref": "#/$defs/osquery_row"
+          }
+        },
+        "network_ips": {
+          "type": "array",
+          "description": "Rows returned by the network_ips osquery pack query.",
+          "items": {
+            "$ref": "#/$defs/osquery_row"
+          }
+        },
+        "deployment_environment": {
+          "type": "array",
+          "description": "Rows returned by the deployment_environment osquery pack query.",
+          "items": {
+            "$ref": "#/$defs/osquery_row"
+          }
+        },
+        "execution_identity": {
+          "type": "array",
+          "description": "Rows returned by the execution_identity osquery pack query.",
+          "items": {
+            "$ref": "#/$defs/osquery_row"
+          }
+        },
+        "user_roles": {
+          "type": "array",
+          "description": "Rows returned by the user_roles osquery pack query.",
+          "items": {
+            "$ref": "#/$defs/osquery_row"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "errors": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "detected": {
+            "const": true
+          }
+        },
+        "required": [
+          "detected"
+        ]
+      },
+      "then": {
+        "properties": {
+          "queries": {
+            "required": [
+              "host_identity",
+              "network_ips",
+              "deployment_environment",
+              "execution_identity",
+              "user_roles"
+            ]
+          }
+        }
+      }
+    }
+  ],
+  "additionalProperties": false,
+  "$defs": {
+    "osquery_row": {
+      "type": "object",
+      "description": "A flat osquery JSON row. osquery serializes column values as strings.",
+      "additionalProperties": {
+        "type": "string"
+      }
+    },
+    "discovery_evidence": {
+      "type": "object",
+      "required": [
+        "query",
+        "rows"
+      ],
+      "properties": {
+        "query": {
+          "type": "string",
+          "minLength": 1
+        },
+        "rows": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/osquery_row"
+          }
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}

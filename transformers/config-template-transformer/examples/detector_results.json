@@ -1,0 +1,26 @@
+{
+  "detectors": [
+    {
+      "detector_name": "nginx_1",
+      "detector_version": "1.0.0",
+      "detected": true,
+      "queries": {
+        "log_locations": [
+          {
+            "pid": "1472",
+            "source": "open_file",
+            "path_or_destination": "/var/log/nginx/access.log",
+            "evidence_status": "observed_open"
+          },
+          {
+            "pid": "1472",
+            "source": "open_file",
+            "path_or_destination": "/var/log/nginx/error.log",
+            "evidence_status": "observed_open"
+          }
+        ]
+      },
+      "errors": []
+    }
+  ]
+}

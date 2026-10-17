@@ -1,0 +1,33 @@
+# Copyright 2026 opamp.info
+# Licensed under the Apache License, Version 2.0.
+
+api_version: opamp.info/v1alpha2
+kind: ObservabilityFragmentTransform
+metadata:
+  name: postgresql_17_logs
+  version: 1.0.0
+spec:
+  detector:
+    name: postgresql_17
+    version_constraint: ">=1.0,<2.0"
+  target:
+    tool: fluent-bit
+    version_constraint: ">=3.2,<5.0"
+  output:
+    path: generated/postgresql_17.inputs.yaml
+    include_path: generated/postgresql_17.inputs.yaml
+  render:
+    engine: jinja2
+    template: fluent_bit_inputs.yaml.j2
+    metadata_file: fluent_bit_inputs.metadata.yaml
+    version: 1.0.0
+    template_api_version: "1.0"
+    context_name: plugins
+  rules:
+    - name: candidate_log_directories
+      for_each: $.queries.log_locations[*]
+      path_from: $.log_directory_candidate
+      values:
+        name: tail
+        tag: opamp.postgresql.17
+        read_from_head: false
