@@ -11,6 +11,11 @@ definitions, renders approved Jinja templates, and writes a checksummed JSON
 manifest. The separate injection command verifies those checksums before it
 adds literal include paths to a parent configuration.
 
+For normal use, pass the external `mappings` catalogue and an agent type. The
+manual `--definition` workflow remains available for individual transforms.
+To create a new mapping, including plugin defaults and Fluent Bit processors,
+follow the beginner-oriented [mapping authoring guide](mapping_authoring_guide.md).
+
 ## Install in the component virtual environment
 
 From `transformers/config-template-transformer`:
@@ -24,6 +29,25 @@ The environment belongs only to this component. Runtime and development
 dependencies are declared in `pyproject.toml`.
 
 ## Render the Fluent Bit example
+
+Automatic Fluent Bit 5 mapping selection:
+
+```powershell
+.\.venv\Scripts\obs-config-transformer.exe render `
+  --detector-results examples/detector_results.json `
+  --mapping-root mappings `
+  --target-tool fluent-bit `
+  --output-root build `
+  --manifest-output build/orchestration.json `
+  --target-version 5.0.0
+```
+
+The selector chooses, for each detected product, the mapping with the highest
+`minimum_version` that does not exceed `--target-version`. Fluent Bit 4.x uses
+the 4.x templates; Fluent Bit 5.x uses the 5.x templates. PostgreSQL's 4.x
+mapping starts at 4.0.4 because Lua processor support begins there.
+
+The equivalent manual-definition example is:
 
 ```powershell
 .\.venv\Scripts\obs-config-transformer.exe render `
@@ -42,6 +66,30 @@ digest; the artifact digest; and the literal include instruction.
 Stable empty fragments are generated if a detector is absent, not detected,
 or contains errors. This prevents a parent include from retaining stale input
 plugins.
+
+## Render OpenTelemetry Collector Contrib
+
+The maintained NGINX mapping has a Collector Contrib 0.163.0 minimum, which was
+the latest release when this mapping was authored:
+
+```powershell
+.\.venv\Scripts\obs-config-transformer.exe render `
+  --detector-results examples/detector_results.json `
+  --mapping-root mappings `
+  --target-tool otelcol-contrib `
+  --output-root build `
+  --manifest-output build/orchestration.json `
+  --target-version 0.163.0
+```
+
+The generated configuration uses `filelog` for NGINX logs and the `nginx`
+receiver for metrics. Collector composition uses repeated `--config` arguments;
+the generic `inject` command therefore does not rewrite a Collector parent:
+
+```powershell
+otelcol-contrib --config base.yaml `
+  --config build/generated/otelcol-contrib/nginx.yaml
+```
 
 ## Inject includes into a parent
 
@@ -74,7 +122,7 @@ The include path is interpreted relative to the parent configuration by
 Fluent Bit. Keep the generated directory beside the assembled parent, or use
 an include path appropriate for the final deployment layout.
 
-## Define another transform
+## Define another mapping or transform
 
 Each transform definition declares:
 
@@ -95,6 +143,14 @@ against the independently validated sidecar before rendering. The requested
 `--target-version` must satisfy both the transform and template ranges. See the
 [template metadata contract](template_metadata.md) for the schema, field
 semantics, versioning policy, compatibility checks, and extension workflow.
+
+For a reusable agent mapping, add a JSON resource below `mappings/<agent>/`
+instead. Mapping resources support static `values`, an optional `path_from`,
+and `fields_from` entries for copying detector fields such as endpoint host and
+port. Nested structures in `values`, including Fluent Bit `processors`, are
+preserved by the generic templates. See the [mapping authoring guide](mapping_authoring_guide.md)
+for the complete workflow and [agent mappings](agent_mappings.md) for the
+resource contract.
 
 ## Add another observability tool
 

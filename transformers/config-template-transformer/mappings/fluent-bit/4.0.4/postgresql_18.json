@@ -1,0 +1,38 @@
+{
+  "_comment": "Copyright 2026 opamp.info; licensed under the Apache License, Version 2.0.",
+  "api_version": "opamp.info/v1alpha1",
+  "kind": "ObservabilityAgentMapping",
+  "metadata": {"name": "fluent_bit_4_postgresql_18", "version": "1.0.0"},
+  "spec": {
+    "detector": {"name": "postgresql_18", "version_constraint": ">=1,<2"},
+    "agent": {"type": "fluent-bit", "minimum_version": "4.0.4"},
+    "output": {
+      "path": "generated/fluent-bit/postgresql_18.inputs.yaml",
+      "include_path": "generated/fluent-bit/postgresql_18.inputs.yaml"
+    },
+    "render": {
+      "engine": "jinja2",
+      "template": "fluent_bit_4_pipeline.yaml.j2",
+      "metadata_file": "fluent_bit_4_pipeline.metadata.yaml",
+      "version": "1.0.0",
+      "template_api_version": "1.0",
+      "context_name": "plugins"
+    },
+    "rules": [{
+      "name": "postgresql_logs",
+      "for_each": "$.queries.log_locations[*]",
+      "path_from": "$.log_directory_candidate",
+      "values": {
+        "name": "tail",
+        "tag": "postgresql.18.logs",
+        "path_suffix": "/*.log",
+        "read_from_head": true,
+        "processors": {"logs": [{
+          "name": "lua",
+          "script": "/etc/fluent-bit/scripts/postgresql.lua",
+          "call": "process_postgresql_record"
+        }]}
+      }
+    }]
+  }
+}

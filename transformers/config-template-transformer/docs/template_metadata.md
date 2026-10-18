@@ -14,6 +14,11 @@ This keeps compatibility information with the template rather than relying on
 file names or documentation conventions. Rendering stops before an artifact is
 written when the transform and metadata disagree.
 
+If you are new to agent plugins or Jinja, begin with the
+[mapping authoring guide](mapping_authoring_guide.md). It explains how detector
+rows become plugin attributes, how mapping defaults work, and how Fluent Bit
+processors are represented. This page focuses on the metadata contract.
+
 ## Resource format
 
 Template metadata uses the `opamp.info/v1alpha1` API and
@@ -65,6 +70,24 @@ fields are rejected.
 Capability names use lowercase snake case. They describe behavior rather than
 a specific detector. New capabilities can be added in a new metadata version;
 removing or changing their meaning requires a template version increase.
+
+## Relationship to mapping rules
+
+Template metadata declares identity, compatibility, and supported behavior; it
+does **not** map osquery result fields to agent attributes. That mapping is
+owned by the external `ObservabilityAgentMapping` JSON resource selected for a
+detector and agent version.
+
+The mapping's `rules` section selects detector rows with `for_each`, copies
+dynamic row values with `fields_from` or `path_from`, and adds fixed target
+properties with `values`. The resulting normalized objects are passed to the
+Jinja variable named by `render.context_name`. The template turns those objects
+into target syntax, while this metadata file verifies that the chosen template
+and agent version are compatible.
+
+See the [agent mapping catalogue](agent_mappings.md#how-mapping-rules-are-established)
+for the authoring procedure, evaluation scopes, precedence rules, and worked
+NGINX and PostgreSQL examples.
 
 ## Transform reference and enforcement
 
