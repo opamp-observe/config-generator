@@ -44,15 +44,17 @@ class DetectorSchemaTests(unittest.TestCase):
                 )
                 for platform_name, relative_pack_path in manifest["packs"].items()
             }
-            self.assertEqual(
-                platform_query_names["linux"],
-                platform_query_names["windows"],
-            )
+            unique_query_sets = {
+                frozenset(query_names)
+                for query_names in platform_query_names.values()
+            }
+            self.assertEqual(1, len(unique_query_sets))
+            common_query_names = set(next(iter(unique_query_sets)))
             detector_schema_references.add(
                 validate_detectors.validate_detector_schema(
                     manifest_path,
                     manifest,
-                    platform_query_names["linux"],
+                    common_query_names,
                 )
             )
 

@@ -27,7 +27,7 @@ RESULT_SCHEMA_KEY = "result_schema"
 SCHEMA_PROPERTIES_KEY = "properties"
 SCHEMA_CONST_KEY = "const"
 SCHEMA_REFERENCE_KEY = "$ref"
-HOST_INVENTORY_DETECTOR_NAME = "host_inventory_1"
+HOST_LEVEL_DETECTOR_NAMES = {"host_inventory_1", "linux_system_1"}
 WEBLOGIC_DETECTOR_PREFIX = "weblogic_"
 PRODUCT_REQUIRED_QUERY_NAMES = {
     "runtime",
@@ -84,14 +84,23 @@ def validate_manifest(manifest_path: Path, seen_names: set[str]) -> dict[str, An
     assert detector["version"], f"Missing detector version in {manifest_path}"
     assert product["name"], f"Missing product name in {manifest_path}"
     assert product["version"], f"Missing product version in {manifest_path}"
-    assert set(manifest["packs"]) == SUPPORTED_PLATFORMS
+    declared_platforms = set(manifest["supported_platforms"])
+    configured_platforms = set(manifest["packs"])
+    assert declared_platforms, f"No supported platforms in {manifest_path}"
+    assert declared_platforms.issubset(SUPPORTED_PLATFORMS), (
+        f"Unsupported platform in {manifest_path}: "
+        f"{sorted(declared_platforms - SUPPORTED_PLATFORMS)}"
+    )
+    assert configured_platforms == declared_platforms, (
+        f"Pack platforms do not match supported platforms in {manifest_path}"
+    )
     assert manifest.get(RESULT_SCHEMA_KEY), (
         f"Missing detector result schema reference in {manifest_path}"
     )
     assert manifest["documentation"], f"Missing documentation sources in {manifest_path}"
     required_query_names = set(manifest["output_contract"]["required_queries"])
     assert required_query_names, f"Empty output contract in {manifest_path}"
-    if detector_name != HOST_INVENTORY_DETECTOR_NAME:
+    if detector_name not in HOST_LEVEL_DETECTOR_NAMES:
         assert PRODUCT_REQUIRED_QUERY_NAMES.issubset(required_query_names), (
             f"Unexpected product-detector output contract in {manifest_path}"
         )
@@ -311,13 +320,14 @@ def main(arguments: list[str] | None = None) -> int:
                     manifest["output_contract"]["required_queries"]
                 ),
             )
-        assert platform_query_names["linux"] == platform_query_names["windows"], (
-            f"Linux and Windows query names differ in {manifest_path}"
+        unique_query_sets = {frozenset(names) for names in platform_query_names.values()}
+        assert len(unique_query_sets) == 1, (
+            f"Platform query names differ in {manifest_path}"
         )
         schema_reference = validate_detector_schema(
             manifest_path,
             manifest,
-            platform_query_names["linux"],
+            set(next(iter(unique_query_sets))),
         )
         assert schema_reference not in detector_schema_references, (
             f"Detector schema is declared more than once: {schema_reference}"

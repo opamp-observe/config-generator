@@ -1,0 +1,158 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$comment": "Copyright 2026 opamp.info; licensed under the Apache License, Version 2.0.",
+  "title": "Linux System Capabilities 1 detector result",
+  "description": "Validates one linux_system_1 result emitted by runner.py.",
+  "type": "object",
+  "required": [
+    "detector_name",
+    "detector_version",
+    "product",
+    "product_version",
+    "release_status",
+    "platform",
+    "detected",
+    "discovery_evidence",
+    "queries",
+    "errors"
+  ],
+  "properties": {
+    "detector_name": {
+      "const": "linux_system_1",
+      "description": "Stable detector identifier."
+    },
+    "detector_version": {
+      "const": "1.0.0",
+      "description": "Version of the detector logic that produced this result."
+    },
+    "product": {
+      "const": "Linux System Capabilities"
+    },
+    "product_version": {
+      "const": "1"
+    },
+    "release_status": {
+      "const": "stable"
+    },
+    "platform": {
+      "const": "linux"
+    },
+    "detected": {
+      "type": "boolean"
+    },
+    "discovery_evidence": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/discovery_evidence"
+      }
+    },
+    "queries": {
+      "type": "object",
+      "properties": {
+        "kernel_information": {
+          "$ref": "#/$defs/osquery_rows",
+          "description": "Active Linux kernel details."
+        },
+        "network_interfaces": {
+          "$ref": "#/$defs/osquery_rows",
+          "description": "Visible interfaces, addresses, link properties, and counters."
+        },
+        "network_protocols": {
+          "$ref": "#/$defs/osquery_rows",
+          "description": "Network and transport protocols observed in the visible namespace."
+        },
+        "network_routes": {
+          "$ref": "#/$defs/osquery_rows",
+          "description": "Active routes visible in the current network namespace."
+        },
+        "listening_sockets": {
+          "$ref": "#/$defs/osquery_rows",
+          "description": "Listening IP and Unix sockets and their visible owners."
+        },
+        "dns_resolvers": {
+          "$ref": "#/$defs/osquery_rows",
+          "description": "Resolver configuration visible to Linux."
+        },
+        "kernel_log_access": {
+          "$ref": "#/$defs/osquery_rows",
+          "description": "POSIX-mode-based assessment of kernel log source readability."
+        },
+        "syslog_availability": {
+          "$ref": "#/$defs/osquery_rows",
+          "description": "Availability evidence for common Linux syslog providers."
+        }
+      },
+      "additionalProperties": false
+    },
+    "errors": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "detected": {
+            "const": true
+          }
+        },
+        "required": [
+          "detected"
+        ]
+      },
+      "then": {
+        "properties": {
+          "queries": {
+            "required": [
+              "kernel_information",
+              "network_interfaces",
+              "network_protocols",
+              "network_routes",
+              "listening_sockets",
+              "dns_resolvers",
+              "kernel_log_access",
+              "syslog_availability"
+            ]
+          }
+        }
+      }
+    }
+  ],
+  "additionalProperties": false,
+  "$defs": {
+    "osquery_row": {
+      "type": "object",
+      "description": "A flat osquery JSON row. osquery serializes column values as strings.",
+      "additionalProperties": {
+        "type": "string"
+      }
+    },
+    "osquery_rows": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/osquery_row"
+      }
+    },
+    "discovery_evidence": {
+      "type": "object",
+      "required": [
+        "query",
+        "rows"
+      ],
+      "properties": {
+        "query": {
+          "type": "string",
+          "minLength": 1
+        },
+        "rows": {
+          "$ref": "#/$defs/osquery_rows"
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}

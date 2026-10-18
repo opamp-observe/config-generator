@@ -16,8 +16,9 @@ from unittest import mock
 
 import runner
 
-EXPECTED_DETECTOR_COUNT = 15
+EXPECTED_DETECTOR_COUNT = 16
 HOST_INVENTORY_DIRECTORY_NAME = "host_inventory"
+LINUX_SYSTEM_DIRECTORY_NAME = "linux_system"
 
 
 class DetectorRunnerTests(unittest.TestCase):
@@ -33,6 +34,12 @@ class DetectorRunnerTests(unittest.TestCase):
         self.assertTrue(
             any(
                 path.parent.parent.name == HOST_INVENTORY_DIRECTORY_NAME
+                for path in manifests
+            )
+        )
+        self.assertTrue(
+            any(
+                path.parent.parent.name == LINUX_SYSTEM_DIRECTORY_NAME
                 for path in manifests
             )
         )

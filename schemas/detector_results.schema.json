@@ -52,6 +52,9 @@
             "$ref": "detectors/host_inventory_1.schema.json"
           },
           {
+            "$ref": "detectors/linux_system_1.schema.json"
+          },
+          {
             "$ref": "detectors/apache_http_server_1.schema.json"
           },
           {

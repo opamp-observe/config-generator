@@ -11,10 +11,10 @@ validates the result object emitted for one detector. The
 validates the aggregate document written by `runner.py` and references every
 detector schema.
 
-A detected result must contain every query defined by that detector's Linux and
-Windows packs. Query arrays may be empty when osquery finds no matching rows or
-when a query reports an error. An undetected result may have an empty `queries`
-object unless the runner was invoked with `--include-undetected`.
+A detected result must contain every query defined by that detector's declared
+operating-system packs. Query arrays may be empty when osquery finds no matching
+rows or when a query reports an error. An undetected result may have an empty
+`queries` object unless the runner was invoked with `--include-undetected`.
 
 Validate an aggregate output with a Draft 2020-12-compatible validator. For
 example, from the repository root with the Python `jsonschema` package:
