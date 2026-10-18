@@ -54,6 +54,7 @@ the supported product versions and operating systems.
 - [PostgreSQL 18](../detectors/postgresql/18/osquery_logic.md)
 - [PostgreSQL 19](../detectors/postgresql/19/osquery_logic.md)
 - [Host inventory](../detectors/host_inventory/1/osquery_logic.md)
+- [Linux system capabilities](../detectors/linux_system/1/osquery_logic.md)
 
 ## Container boundary
 

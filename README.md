@@ -14,12 +14,13 @@ This repository contains separate, versioned osquery detectors for:
 - Oracle Database 19c, 21c, and 26ai
 - PostgreSQL 17, 18, and the PostgreSQL 19 development line
 - Cross-platform host identity and deployment-environment inventory
+- Linux network, kernel-log access, and syslog capability inventory
 
 Every setup lives below `detectors/<product>/<version>/` and contains a
-self-identifying manifest, Linux and Windows osquery packs, and product-specific
-documentation. PostgreSQL 19 is deliberately marked `development`; as of
-2026-10-14 the PostgreSQL project and official image publish 19 beta builds, not
-a production release.
+self-identifying manifest, osquery packs for its declared operating systems,
+and product-specific documentation. PostgreSQL 19 is deliberately marked
+`development`; as of 2026-10-14 the PostgreSQL project and official image
+publish 19 beta builds, not a production release.
 
 ## Run all detectors
 
@@ -60,6 +61,10 @@ Run `--detector host_inventory_1` to publish hostname, interface addresses, OS
 version, possible container/VM evidence, and visible user roles independently
 of the product detectors.
 
+Run `--detector linux_system_1` for the separate Linux-specific inventory of
+interfaces, observed network protocols, routes, listeners, DNS resolvers,
+kernel details, kernel-log access, and syslog availability.
+
 The [detector catalogue](detectors/catalogue.md) lists supported product
 versions and operating systems. The [detector logic index](docs/osquery_logic.md)
 links to the detailed logic document colocated with every detector.
@@ -70,21 +75,30 @@ mappings and deployment policy to generate Fluent Bit YAML.
 ## Generate observability configuration fragments
 
 The standalone [configuration template transformer](transformers/config-template-transformer/readme.md)
-uses versioned YAML definitions, RFC 9535 JSONPath selection, and sandboxed
-Jinja templates to convert detector results into configuration fragments. Its
-JSON orchestration manifest records template, transform, detector, target, and
-artifact versions and checksums before includes are injected into a parent
-configuration.
+uses agent-specific [JSON mapping catalogues](transformers/config-template-transformer/docs/agent_mappings.md),
+RFC 9535 JSONPath selection, and sandboxed Jinja templates to convert detector
+results into configuration fragments. It selects the highest compatible
+minimum agent version and records template, mapping, detector, target, and
+artifact versions and checksums in a JSON orchestration manifest.
 Each template also has a validated
 [metadata sidecar](transformers/config-template-transformer/docs/template_metadata.md)
 that declares its capabilities, signals, target observability tool, and
 supported tool-version range.
+See the [execution-flow diagrams](transformers/config-template-transformer/docs/execution_flow.md)
+for the complete detector-to-agent workflow and detailed transformer logic.
+The [mapping authoring guide](transformers/config-template-transformer/docs/mapping_authoring_guide.md)
+is the beginner-focused walkthrough for plugin parameters, defaults, JSONPath,
+Jinja templates, and Fluent Bit processors.
+The [observability configuration roadmap](docs/roadmap/observability_configuration_roadmap.md)
+tracks normalized log discovery and deduplication, database queries, MongoDB,
+additional agents, regression evidence, and mapping-version audits.
 
-Fluent Bit YAML is the first implemented target and is covered by unit tests
-and a native Fluent Bit 4.2 dry-run system test. The target-adapter contract is
-designed for the other agents listed in
-`universal-obs-agent-installer/spec.md`: Fluentd, Vector, OpenTelemetry
-Collector, Telegraf, Elastic Agent, and Filebeat.
+Fluent Bit 4.x/5+ YAML and OpenTelemetry Collector Contrib 0.163+ YAML are
+implemented targets. The maintained catalogue maps NGINX logs and metrics to
+both agents and PostgreSQL logs to Fluent Bit tail inputs with a Lua processor
+placeholder. The target-adapter contract is designed for the other agents
+listed in `universal-obs-agent-installer/spec.md`: Fluentd, Vector, Telegraf,
+Elastic Agent, and Filebeat.
 
 ## Validate
 

@@ -1,0 +1,46 @@
+{
+  "_comment": "Copyright 2026 opamp.info; licensed under the Apache License, Version 2.0. See license.txt at the repository root.",
+  "schema_version": "1.0",
+  "license": "Apache-2.0",
+  "result_schema": "../../../schemas/detectors/linux_system_1.schema.json",
+  "detector": {
+    "name": "linux_system_1",
+    "version": "1.0.0"
+  },
+  "product": {
+    "name": "Linux System Capabilities",
+    "version": "1",
+    "release_status": "stable"
+  },
+  "supported_platforms": [
+    "linux"
+  ],
+  "packs": {
+    "linux": "packs/linux.conf"
+  },
+  "documentation": [
+    "https://github.com/osquery/osquery/blob/master/specs/kernel_info.table",
+    "https://github.com/osquery/osquery/blob/master/specs/interface_addresses.table",
+    "https://github.com/osquery/osquery/blob/master/specs/interface_details.table",
+    "https://github.com/osquery/osquery/blob/master/specs/routes.table",
+    "https://github.com/osquery/osquery/blob/master/specs/listening_ports.table",
+    "https://github.com/osquery/osquery/blob/master/specs/posix/dns_resolvers.table",
+    "https://github.com/osquery/osquery/blob/master/specs/linux/syslog_events.table"
+  ],
+  "output_contract": {
+    "required_queries": [
+      "kernel_information",
+      "network_interfaces",
+      "network_protocols",
+      "network_routes",
+      "listening_sockets",
+      "dns_resolvers",
+      "kernel_log_access",
+      "syslog_availability"
+    ],
+    "aggregate_key": "linux_system_1"
+  },
+  "compatibility": {
+    "minimum_osquery_version": "5.0.0"
+  }
+}

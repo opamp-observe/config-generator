@@ -14,6 +14,7 @@ document for discovery limitations and container visibility requirements.
 |---|---|---:|---:|---|---|---|
 | Apache HTTP Server | `apache_http_server_1` | Any | 1.0.0 | Stable | Linux, Windows | [README](apache_http_server/1/readme.md) · [Logic](apache_http_server/1/osquery_logic.md) |
 | Host Inventory | `host_inventory_1` | 1 | 1.0.0 | Stable | Linux, Windows | [README](host_inventory/1/README.md) · [Logic](host_inventory/1/osquery_logic.md) |
+| Linux System Capabilities | `linux_system_1` | 1 | 1.0.0 | Stable | Linux | [README](linux_system/1/readme.md) · [Logic](linux_system/1/osquery_logic.md) |
 | Java Application | `java_app_1` | Any | 1.0.0 | Stable | Linux, Windows | [README](java_app/1/readme.md) · [Logic](java_app/1/osquery_logic.md) |
 | NGINX | `nginx_1` | Any | 1.0.0 | Stable | Linux, Windows | [README](nginx/1/readme.md) · [Logic](nginx/1/osquery_logic.md) |
 | Node.js Application | `nodejs_app_1` | Any | 1.0.0 | Stable | Linux, Windows | [README](nodejs_app/1/readme.md) · [Logic](nodejs_app/1/osquery_logic.md) |
