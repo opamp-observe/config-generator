@@ -58,6 +58,10 @@ The important separation is:
 | Target adapter | Performs final structural validation and deterministic serialization. |
 | Orchestration manifest | Records generated artifacts, versions, hashes, and composition instructions. |
 
+See the
+[configuration file relationship diagram](execution_flow.md#configuration-file-relationships)
+for the references and runtime flow between these files.
+
 ## Understand the target agent first
 
 An observability agent loads one or more components. In Fluent Bit, an input

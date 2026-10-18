@@ -18,6 +18,9 @@ If you are new to agent plugins or Jinja, begin with the
 [mapping authoring guide](mapping_authoring_guide.md). It explains how detector
 rows become plugin attributes, how mapping defaults work, and how Fluent Bit
 processors are represented. This page focuses on the metadata contract.
+The [configuration file relationship diagram](execution_flow.md#configuration-file-relationships)
+shows where metadata is checked during rendering and how it relates to mapping
+JSON, Jinja templates, generated fragments, and orchestration manifests.
 
 ## Resource format
 

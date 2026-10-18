@@ -25,8 +25,9 @@ The beginner-oriented [`mapping_authoring_guide.md`](docs/mapping_authoring_guid
 explains agent plugins, defaults, JSONPath rules, basic Jinja syntax, Fluent Bit
 plugin parameters, processors, and configuration injection.
 The [`execution_flow.md`](docs/execution_flow.md) architecture page includes
-Mermaid diagrams for the complete detector-to-agent workflow and the detailed
-transformer execution path.
+Mermaid diagrams for the complete detector-to-agent workflow, the detailed
+transformer execution path, and the relationships between authored, generated,
+and deployment-owned configuration files.
 The repository-level
 [`observability_configuration_roadmap.md`](../../docs/roadmap/observability_configuration_roadmap.md)
 defines the planned log-source, database, agent, regression, and version-audit
