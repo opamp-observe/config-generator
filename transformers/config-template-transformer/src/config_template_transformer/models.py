@@ -21,14 +21,33 @@ class TransformRule:
     Attributes:
         name: Stable rule name used in diagnostics.
         for_each: RFC 9535 JSONPath selecting source rows.
-        path_from: RFC 9535 JSONPath selecting paths relative to each source row.
+        path_from: Optional RFC 9535 JSONPath selecting paths from each source row.
+        fields_from: Output field names mapped to RFC 9535 selectors on each row.
         values: Static plugin values copied into every emitted object.
     """
 
     name: str
     for_each: str
-    path_from: str
+    path_from: str | None
+    fields_from: dict[str, str]
     values: dict[str, Any]
+
+
+@dataclass(frozen=True)
+class AgentMapping:
+    """Associate one detector transform with an agent compatibility floor.
+
+    Attributes:
+        agent_type: Stable observability-agent adapter name.
+        minimum_agent_version: Lowest agent version that can use this mapping.
+        definition: Normalized transform selected when the version floor matches.
+        source_path: JSON mapping file retained for diagnostics.
+    """
+
+    agent_type: str
+    minimum_agent_version: str
+    definition: TransformDefinition
+    source_path: Path
 
 
 @dataclass(frozen=True)

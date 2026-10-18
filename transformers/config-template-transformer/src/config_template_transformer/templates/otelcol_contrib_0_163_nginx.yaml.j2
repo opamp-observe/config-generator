@@ -1,0 +1,44 @@
+# Copyright 2026 opamp.info
+# Licensed under the Apache License, Version 2.0.
+
+{% set log_plugins = plugins | selectattr("kind", "equalto", "filelog") | list %}
+{% set metric_plugins = plugins | selectattr("kind", "equalto", "nginx") | list %}
+{% if plugins %}
+receivers:
+{% for plugin in plugins %}
+{% if plugin.kind == "filelog" %}
+  filelog/nginx_{{ loop.index }}:
+    include:
+      - {{ plugin.path | tojson }}
+    start_at: {{ plugin.start_at | tojson }}
+{% elif plugin.kind == "nginx" %}
+  nginx/nginx_{{ loop.index }}:
+    endpoint: {{ ("http://" ~ plugin.host ~ ":" ~ plugin.port ~ plugin.status_path) | tojson }}
+    collection_interval: {{ plugin.collection_interval | tojson }}
+{% endif %}
+{% endfor %}
+service:
+  pipelines:
+{% if log_plugins %}
+    logs:
+      receivers:
+{% for plugin in plugins %}
+{% if plugin.kind == "filelog" %}
+        - filelog/nginx_{{ loop.index }}
+{% endif %}
+{% endfor %}
+{% endif %}
+{% if metric_plugins %}
+    metrics:
+      receivers:
+{% for plugin in plugins %}
+{% if plugin.kind == "nginx" %}
+        - nginx/nginx_{{ loop.index }}
+{% endif %}
+{% endfor %}
+{% endif %}
+{% else %}
+receivers: {}
+service:
+  pipelines: {}
+{% endif %}

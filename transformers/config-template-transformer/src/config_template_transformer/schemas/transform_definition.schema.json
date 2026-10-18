@@ -72,11 +72,17 @@
           "minItems": 1,
           "items": {
             "type": "object",
-            "required": ["name", "for_each", "path_from", "values"],
+            "required": ["name", "for_each", "values"],
             "properties": {
               "name": {"type": "string", "minLength": 1, "description": "Stable rule name."},
               "for_each": {"type": "string", "pattern": "^\\$", "description": "RFC 9535 JSONPath selecting source rows."},
               "path_from": {"type": "string", "pattern": "^\\$", "description": "RFC 9535 JSONPath selecting paths from each row."},
+              "fields_from": {
+                "type": "object",
+                "propertyNames": {"pattern": "^[A-Za-z_][A-Za-z0-9_]*$"},
+                "additionalProperties": {"type": "string", "pattern": "^\\$"},
+                "description": "Output fields mapped to RFC 9535 JSONPath selectors evaluated against each selected row."
+              },
               "values": {
                 "type": "object",
                 "minProperties": 1,

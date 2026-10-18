@@ -1,0 +1,25 @@
+# Copyright 2026 opamp.info
+# Licensed under the Apache License, Version 2.0.
+
+api_version: opamp.info/v1alpha1
+kind: ObservabilityTemplateMetadata
+metadata:
+  name: fluent_bit_4_pipeline
+  version: 1.0.0
+spec:
+  engine: jinja2
+  template: fluent_bit_4_pipeline.yaml.j2
+  template_api_version: "1.0"
+  target:
+    tool: fluent-bit
+    version_constraint: ">=4.0,<5.0"
+  supports:
+    artifact_kind: input_fragment
+    signals:
+      - logs
+      - metrics
+    capabilities:
+      - file_tail_inputs
+      - nginx_metrics_input
+      - lua_log_processor
+      - stable_empty_fragment

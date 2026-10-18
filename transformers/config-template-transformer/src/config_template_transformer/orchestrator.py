@@ -20,6 +20,7 @@ from packaging.version import InvalidVersion, Version
 
 from config_template_transformer import APPLICATION_NAME, APPLICATION_VERSION
 from config_template_transformer.adapters import TargetAdapter, get_target_adapter
+from config_template_transformer.agent_mappings import select_agent_mapping_definitions
 from config_template_transformer.constants import (
     ARTIFACTS_KEY,
     DEFAULT_MAX_PLUGIN_COUNT,
@@ -64,6 +65,7 @@ from config_template_transformer.models import (
     TemplateSupportRecord,
     TemplateTargetRecord,
     TransformDefinition,
+    TransformRule,
 )
 from config_template_transformer.renderer import JinjaFragmentRenderer
 from config_template_transformer.template_metadata import load_template_metadata
@@ -110,6 +112,8 @@ class TransformationOrchestrator:
         manifest_output: Path,
         target_version: str,
         detector_schema_path: Path | None = None,
+        mapping_root: Path | None = None,
+        target_tool: str | None = None,
     ) -> OrchestrationManifest:
         """Render all definitions and write their JSON orchestration manifest.
 
@@ -120,6 +124,8 @@ class TransformationOrchestrator:
             manifest_output: JSON manifest output path.
             target_version: Installed or intended target-tool version.
             detector_schema_path: Optional aggregate detector JSON Schema.
+            mapping_root: Optional external JSON mapping catalogue root.
+            target_tool: Agent adapter name used with the mapping catalogue.
 
         Returns:
             Validated manifest describing every artifact and include instruction.
@@ -128,20 +134,25 @@ class TransformationOrchestrator:
             TransformerError: Inputs, versions, selections, or rendering are invalid.
         """
 
-        if not definition_paths:
-            raise TransformerError("At least one transform definition is required")
-        detector_results = load_json_object(detector_results_path)
-        validate_external_schema(detector_results, detector_schema_path)
-        detector_entries = detector_results.get(DETECTORS_KEY)
-        if not isinstance(detector_entries, list):
-            raise TransformerError("Detector results must contain a detectors array")
-
-        definitions = sorted(
-            (load_transform_definition(path) for path in definition_paths),
-            key=lambda definition: definition.name,
+        if definition_paths and mapping_root is not None:
+            raise TransformerError("Use transform definitions or an agent mapping root, not both")
+        if mapping_root is None and not definition_paths:
+            raise TransformerError("At least one transform definition or mapping root is required")
+        if mapping_root is not None and not target_tool:
+            raise TransformerError("Target tool is required when selecting agent mappings")
+        detector_entries = self._load_detector_entries(
+            detector_results_path,
+            detector_schema_path,
+        )
+        target_version_value = self._parse_version(target_version, "target version")
+        definitions = self._load_definitions(
+            definition_paths,
+            mapping_root,
+            str(target_tool),
+            target_version_value,
+            detector_entries,
         )
         adapter = self._resolve_common_adapter(definitions)
-        target_version_value = self._parse_version(target_version, "target version")
         artifacts = tuple(
             self._render_definition(
                 definition=definition,
@@ -152,13 +163,105 @@ class TransformationOrchestrator:
             )
             for definition in definitions
         )
+        return self._write_manifest(
+            detector_results_path,
+            manifest_output,
+            target_version_value,
+            adapter,
+            artifacts,
+        )
+
+    @staticmethod
+    def _load_detector_entries(
+        detector_results_path: Path,
+        detector_schema_path: Path | None,
+    ) -> list[Any]:
+        """Load aggregate detector results and return their entry array.
+
+        Args:
+            detector_results_path: Aggregate detector JSON input.
+            detector_schema_path: Optional external schema for the aggregate.
+
+        Returns:
+            Detector entries available for mapping and selection.
+
+        Raises:
+            TransformerError: The input lacks a detector array or fails validation.
+        """
+
+        detector_results = load_json_object(detector_results_path)
+        validate_external_schema(detector_results, detector_schema_path)
+        detector_entries = detector_results.get(DETECTORS_KEY)
+        if not isinstance(detector_entries, list):
+            raise TransformerError("Detector results must contain a detectors array")
+        return detector_entries
+
+    @staticmethod
+    def _load_definitions(
+        definition_paths: list[Path],
+        mapping_root: Path | None,
+        target_tool: str,
+        target_version: Version,
+        detector_entries: list[Any],
+    ) -> list[TransformDefinition]:
+        """Load explicit transforms or select compatible external mappings.
+
+        Args:
+            definition_paths: Explicit YAML transforms requested by the caller.
+            mapping_root: Optional external agent mapping catalogue.
+            target_tool: Requested mapping agent type.
+            target_version: Parsed agent version used for floor selection.
+            detector_entries: Aggregate entries used to identify detector names.
+
+        Returns:
+            Deterministically ordered definitions ready for rendering.
+        """
+
+        if mapping_root is None:
+            return sorted(
+                (load_transform_definition(path) for path in definition_paths),
+                key=lambda definition: definition.name,
+            )
+        detector_names = {
+            str(entry[DETECTOR_NAME_KEY])
+            for entry in detector_entries
+            if isinstance(entry, dict) and entry.get(DETECTOR_NAME_KEY)
+        }
+        return select_agent_mapping_definitions(
+            mapping_root=mapping_root,
+            detector_names=detector_names,
+            agent_type=target_tool,
+            agent_version=target_version,
+        )
+
+    @staticmethod
+    def _write_manifest(
+        detector_results_path: Path,
+        manifest_output: Path,
+        target_version: Version,
+        adapter: TargetAdapter,
+        artifacts: tuple[ArtifactRecord, ...],
+    ) -> OrchestrationManifest:
+        """Build, validate, and atomically write one orchestration manifest.
+
+        Args:
+            detector_results_path: Source JSON path recorded and checksummed.
+            manifest_output: Destination for the generated manifest JSON.
+            target_version: Parsed target agent version.
+            adapter: Adapter describing the target and composition strategy.
+            artifacts: Rendered artifact provenance records.
+
+        Returns:
+            Validated manifest written to the destination path.
+        """
+
         manifest = OrchestrationManifest(
             schema_version=SCHEMA_VERSION,
             generated_at=datetime_module.datetime.now(datetime_module.timezone.utc).isoformat(),
             generator=GeneratorRecord(name=APPLICATION_NAME, version=APPLICATION_VERSION),
             target=TargetRecord(
                 tool=adapter.tool_name,
-                version=str(target_version_value),
+                version=str(target_version),
                 configuration_format=adapter.configuration_format,
                 include_strategy=adapter.include_strategy,
             ),
@@ -382,32 +485,99 @@ class TransformationOrchestrator:
             for rule in definition.rules:
                 source_nodes = jsonpath.find(rule.for_each, detector_entry)
                 for source_node in source_nodes:
+                    plugin = self._build_plugin_fields(rule, source_node.value, definition.name)
+                    if plugin is None:
+                        continue
+                    if rule.path_from is None:
+                        self._append_unique_plugin(
+                            plugins,
+                            seen_identities,
+                            plugin,
+                            definition.name,
+                        )
+                        continue
                     path_nodes = jsonpath.find(rule.path_from, source_node.value)
                     for path_node in path_nodes:
-                        if not isinstance(path_node.value, str) or not path_node.value.strip():
-                            continue
-                        plugin = dict(rule.values)
-                        plugin[PATH_KEY] = path_node.value.strip()
-                        identity = json.dumps(
-                            plugin,
-                            ensure_ascii=False,
-                            separators=(",", ":"),
-                            sort_keys=True,
-                        )
-                        if identity in seen_identities:
-                            continue
-                        seen_identities.add(identity)
-                        plugins.append(plugin)
-                        if len(plugins) > self.max_plugin_count:
-                            raise TransformerError(
-                                f"Transform {definition.name} exceeds plugin limit "
-                                f"{self.max_plugin_count}"
+                        if isinstance(path_node.value, str) and path_node.value.strip():
+                            path_plugin = dict(plugin)
+                            path_plugin[PATH_KEY] = path_node.value.strip()
+                            self._append_unique_plugin(
+                                plugins,
+                                seen_identities,
+                                path_plugin,
+                                definition.name,
                             )
         except jsonpath.JSONPathError as error:
             raise TransformerError(
                 f"JSONPath evaluation failed for transform {definition.name}: {error}"
             ) from error
         return plugins
+
+    @staticmethod
+    def _build_plugin_fields(
+        rule: TransformRule,
+        source_value: Any,
+        definition_name: str,
+    ) -> dict[str, Any] | None:
+        """Combine static values with singular dynamic fields for one source row.
+
+        Args:
+            rule: Normalized transform rule containing values and field selectors.
+            source_value: Detector row selected by the rule's `for_each` expression.
+            definition_name: Transform identity used in ambiguity errors.
+
+        Returns:
+            Complete plugin fields, or ``None`` when a dynamic field is absent.
+
+        Raises:
+            TransformerError: A dynamic field selector returns multiple values.
+        """
+
+        plugin = dict(rule.values)
+        for field_name, field_selector in rule.fields_from.items():
+            field_nodes = jsonpath.find(field_selector, source_value)
+            if not field_nodes:
+                return None
+            if len(field_nodes) > 1:
+                raise TransformerError(
+                    f"Transform {definition_name} field {field_name} selected multiple values"
+                )
+            plugin[field_name] = field_nodes[0].value
+        return plugin
+
+    def _append_unique_plugin(
+        self,
+        plugins: list[dict[str, Any]],
+        seen_identities: set[str],
+        plugin: dict[str, Any],
+        definition_name: str,
+    ) -> None:
+        """Append a new deterministic plugin and enforce the configured limit.
+
+        Args:
+            plugins: Ordered destination plugin list.
+            seen_identities: Canonical JSON identities already emitted.
+            plugin: Candidate plugin object to deduplicate.
+            definition_name: Transform identity used in limit errors.
+
+        Raises:
+            TransformerError: The plugin count exceeds the safety limit.
+        """
+
+        identity = json.dumps(
+            plugin,
+            ensure_ascii=False,
+            separators=(",", ":"),
+            sort_keys=True,
+        )
+        if identity in seen_identities:
+            return
+        seen_identities.add(identity)
+        plugins.append(plugin)
+        if len(plugins) > self.max_plugin_count:
+            raise TransformerError(
+                f"Transform {definition_name} exceeds plugin limit {self.max_plugin_count}"
+            )
 
     @staticmethod
     def _resolve_common_adapter(

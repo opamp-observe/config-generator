@@ -1,0 +1,20 @@
+# Copyright 2026 opamp.info
+# Licensed under the Apache License, Version 2.0.
+
+pipeline:
+{% if plugins %}
+  inputs:
+{% for plugin in plugins %}
+    - name: {{ plugin.name | tojson }}
+{% if plugin.path is defined %}
+      path: {{ (plugin.path ~ (plugin.path_suffix | default(""))) | tojson }}
+{% endif %}
+{% for property_name, property_value in plugin.items() %}
+{% if property_name not in ["name", "path", "path_suffix"] %}
+      {{ property_name }}: {{ property_value | tojson }}
+{% endif %}
+{% endfor %}
+{% endfor %}
+{% else %}
+  inputs: []
+{% endif %}

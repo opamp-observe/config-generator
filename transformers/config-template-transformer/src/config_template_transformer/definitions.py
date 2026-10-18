@@ -19,6 +19,7 @@ from config_template_transformer.constants import (
     API_VERSION_KEY,
     CONTEXT_NAME_KEY,
     DETECTOR_KEY,
+    FIELDS_FROM_KEY,
     FOR_EACH_KEY,
     INCLUDE_PATH_KEY,
     METADATA_FILE_KEY,
@@ -70,14 +71,14 @@ def load_transform_definition(definition_path: Path) -> TransformDefinition:
         load_packaged_schema(TRANSFORM_SCHEMA_RESOURCE),
         f"transform definition {definition_path}",
     )
-    return _build_definition(loaded_value, definition_path)
+    return build_transform_definition(loaded_value, definition_path)
 
 
-def _build_definition(
+def build_transform_definition(
     document: dict[str, Any],
     definition_path: Path,
 ) -> TransformDefinition:
-    """Convert a schema-valid mapping into an immutable definition.
+    """Convert a schema-valid transform mapping into an immutable definition.
 
     Args:
         document: Schema-valid transform mapping.
@@ -105,7 +106,8 @@ def _build_definition(
         TransformRule(
             name=rule[NAME_KEY],
             for_each=rule[FOR_EACH_KEY],
-            path_from=rule[PATH_FROM_KEY],
+            path_from=rule.get(PATH_FROM_KEY),
+            fields_from=dict(rule.get(FIELDS_FROM_KEY, {})),
             values=dict(rule[VALUES_KEY]),
         )
         for rule in specification[RULES_KEY]

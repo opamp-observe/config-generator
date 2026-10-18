@@ -21,8 +21,15 @@ from config_template_transformer.constants import (
     INCLUDES_KEY,
     INPUTS_KEY,
     MEDIA_TYPE_FLUENT_BIT_YAML,
+    MEDIA_TYPE_OTELCOL_YAML,
     NAME_KEY,
+    OTELCOL_CONTRIB_CONFIGURATION_FORMAT,
+    OTELCOL_CONTRIB_INCLUDE_STRATEGY,
+    OTELCOL_CONTRIB_TOOL_NAME,
     PIPELINE_KEY,
+    PIPELINES_KEY,
+    RECEIVERS_KEY,
+    SERVICE_KEY,
     UTF8_ENCODING,
 )
 from config_template_transformer.errors import TransformerError
@@ -170,6 +177,100 @@ class FluentBitAdapter:
             raise TransformerError("Every Fluent Bit input must be a mapping with a name")
 
 
+class OpenTelemetryCollectorContribAdapter:
+    """Produce OpenTelemetry Collector Contrib YAML configuration fragments.
+
+    Attributes:
+        tool_name: Manifest and mapping name for the Contrib distribution.
+        configuration_format: YAML syntax emitted by this adapter.
+        include_strategy: Multiple configuration files supplied by repeated CLI flags.
+        media_type: OpenTelemetry Collector YAML artifact media type.
+    """
+
+    tool_name = OTELCOL_CONTRIB_TOOL_NAME
+    configuration_format = OTELCOL_CONTRIB_CONFIGURATION_FORMAT
+    include_strategy = OTELCOL_CONTRIB_INCLUDE_STRATEGY
+    media_type = MEDIA_TYPE_OTELCOL_YAML
+
+    def serialize_fragment(
+        self,
+        fragment: dict[str, Any],
+        definition: TransformDefinition,
+    ) -> bytes:
+        """Validate and serialize an OpenTelemetry Collector configuration.
+
+        Args:
+            fragment: Parsed Jinja output containing receivers and service pipelines.
+            definition: Versioned mapping used for the provenance banner.
+
+        Returns:
+            UTF-8 YAML bytes with transform and template version comments.
+
+        Raises:
+            TransformerError: The receiver or service pipeline structure is invalid.
+        """
+
+        self._validate_fragment(fragment)
+        yaml_writer = YAML(typ="safe")
+        yaml_writer.default_flow_style = False
+        yaml_writer.sort_base_mapping_type_on_output = False
+        output_stream = StringIO()
+        yaml_writer.dump(fragment, output_stream)
+        provenance = (
+            f"# generated_by=opamp-config-template-transformer "
+            f"transform={definition.name}@{definition.version} "
+            f"template={definition.template_name}@{definition.template_version} "
+            f"template_api={definition.template_api_version}\n"
+        )
+        return (provenance + output_stream.getvalue()).encode(UTF8_ENCODING)
+
+    def inject_includes(
+        self,
+        parent_path: Path,
+        include_paths: list[str],
+        output_path: Path,
+    ) -> None:
+        """Explain how Collector fragments must be supplied to the executable.
+
+        Args:
+            parent_path: Unused parent configuration path from the generic interface.
+            include_paths: Generated configuration files intended for CLI arguments.
+            output_path: Unused output path from the generic interface.
+
+        Raises:
+            TransformerError: Collector configuration composition is a CLI operation.
+        """
+
+        del parent_path, include_paths, output_path
+        raise TransformerError(
+            "OpenTelemetry Collector fragments use repeated --config arguments; "
+            "automatic parent-file injection is not supported"
+        )
+
+    @staticmethod
+    def _validate_fragment(fragment: dict[str, Any]) -> None:
+        """Require receiver definitions and service pipeline configuration.
+
+        Args:
+            fragment: Parsed Jinja output to validate.
+
+        Raises:
+            TransformerError: Required Collector mappings are absent.
+        """
+
+        receivers = fragment.get(RECEIVERS_KEY)
+        service = fragment.get(SERVICE_KEY)
+        if not isinstance(receivers, dict) or not all(
+            isinstance(receiver_name, str) and isinstance(receiver_config, dict)
+            for receiver_name, receiver_config in receivers.items()
+        ):
+            raise TransformerError("OpenTelemetry Collector receivers must be a mapping")
+        if not isinstance(service, dict) or not isinstance(service.get(PIPELINES_KEY), dict):
+            raise TransformerError(
+                "OpenTelemetry Collector service.pipelines must be a mapping"
+            )
+
+
 def get_target_adapter(tool_name: str) -> TargetAdapter:
     """Return the adapter registered for a target tool.
 
@@ -185,6 +286,8 @@ def get_target_adapter(tool_name: str) -> TargetAdapter:
 
     if tool_name == FLUENT_BIT_TOOL_NAME:
         return FluentBitAdapter()
+    if tool_name == OTELCOL_CONTRIB_TOOL_NAME:
+        return OpenTelemetryCollectorContribAdapter()
     raise TransformerError(
         f"Unsupported target tool '{tool_name}'; add a TargetAdapter implementation"
     )

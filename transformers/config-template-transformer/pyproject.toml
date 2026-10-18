@@ -7,13 +7,13 @@ build-backend = "hatchling.build"
 
 [project]
 name = "opamp-config-template-transformer"
-version = "0.2.0"
+version = "0.3.0"
 description = "Versioned Jinja configuration-fragment transformer for observability tools"
 readme = "readme.md"
 requires-python = ">=3.10"
 license = "Apache-2.0"
 authors = [{ name = "opamp.info" }]
-keywords = ["observability", "configuration", "jinja", "fluent-bit", "opamp"]
+keywords = ["observability", "configuration", "jinja", "fluent-bit", "opentelemetry", "opamp"]
 dependencies = [
   "Jinja2>=3.1,<4",
   "jsonpath-rfc9535>=0.1,<1",

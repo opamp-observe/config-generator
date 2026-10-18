@@ -54,12 +54,21 @@ def build_parser() -> argparse.ArgumentParser:
         help="Render fragments and write an orchestration JSON manifest.",
     )
     render_parser.add_argument("--detector-results", type=Path, required=True)
-    render_parser.add_argument(
+    mapping_source_group = render_parser.add_mutually_exclusive_group(required=True)
+    mapping_source_group.add_argument(
         "--definition",
         type=Path,
         action="append",
-        required=True,
         help="Versioned YAML transform definition; repeat for multiple fragments.",
+    )
+    mapping_source_group.add_argument(
+        "--mapping-root",
+        type=Path,
+        help="External agent-specific JSON mapping hierarchy.",
+    )
+    render_parser.add_argument(
+        "--target-tool",
+        help="Agent adapter name; required with --mapping-root.",
     )
     render_parser.add_argument(
         "--template-root",
@@ -111,11 +120,13 @@ def run(arguments: argparse.Namespace) -> None:
         orchestrator = TransformationOrchestrator(arguments.template_root)
         orchestrator.render(
             detector_results_path=arguments.detector_results,
-            definition_paths=arguments.definition,
+            definition_paths=arguments.definition or [],
             output_root=arguments.output_root,
             manifest_output=arguments.manifest_output,
             target_version=arguments.target_version,
             detector_schema_path=arguments.detector_schema,
+            mapping_root=arguments.mapping_root,
+            target_tool=arguments.target_tool,
         )
         return
     if arguments.command == COMMAND_INJECT:

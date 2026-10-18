@@ -167,6 +167,27 @@ def test_orchestrator_requires_definitions_and_one_target(component_paths: dict[
             "4.2.0",
         )
 
+    mapping_root = component_paths[FIXTURE_DEFINITION_KEY].parent
+    with pytest.raises(TransformerError, match="not both"):
+        orchestrator.render(
+            component_paths[FIXTURE_DETECTOR_KEY],
+            [component_paths[FIXTURE_DEFINITION_KEY]],
+            component_paths[FIXTURE_OUTPUT_ROOT_KEY],
+            component_paths[FIXTURE_MANIFEST_KEY],
+            "4.2.0",
+            mapping_root=mapping_root,
+            target_tool="fluent-bit",
+        )
+    with pytest.raises(TransformerError, match="Target tool is required"):
+        orchestrator.render(
+            component_paths[FIXTURE_DETECTOR_KEY],
+            [],
+            component_paths[FIXTURE_OUTPUT_ROOT_KEY],
+            component_paths[FIXTURE_MANIFEST_KEY],
+            "4.2.0",
+            mapping_root=mapping_root,
+        )
+
     other_definition = write_text(
         component_paths[FIXTURE_DEFINITION_KEY].parent / "other.yaml",
         TRANSFORM_TEXT.replace("name: nginx_1_logs", "name: other", 1).replace(
@@ -196,6 +217,39 @@ def test_orchestrator_enforces_plugin_limit(component_paths: dict[str, Path]) ->
             component_paths[FIXTURE_OUTPUT_ROOT_KEY],
             component_paths[FIXTURE_MANIFEST_KEY],
             "4.2.0",
+        )
+
+
+def test_orchestrator_skips_missing_dynamic_fields(component_paths: dict[str, Path]) -> None:
+    """Skip a source row when an optional mapped detector field is absent."""
+
+    definition_text = TRANSFORM_TEXT.replace(
+        "      path_from: $.path_or_destination\n",
+        "      fields_from:\n        endpoint: $.missing_endpoint\n",
+    )
+    manifest = render_fixture(component_paths, definition_text=definition_text)
+    assert manifest[ARTIFACTS_KEY][0][PLUGIN_COUNT_KEY] == 0
+
+
+def test_orchestrator_rejects_ambiguous_dynamic_fields(
+    component_paths: dict[str, Path],
+) -> None:
+    """Reject a field selector that cannot map one source row to one value."""
+
+    definition_text = TRANSFORM_TEXT.replace(
+        "      path_from: $.path_or_destination\n",
+        "      fields_from:\n        endpoint: $.*\n",
+    )
+    detector_text = DETECTOR_RESULTS_TEXT.replace(
+        '"path_or_destination": "/var/log/nginx/access.log"',
+        '"path_or_destination": "/var/log/nginx/access.log", "secondary": "value"',
+        1,
+    )
+    with pytest.raises(TransformerError, match="selected multiple values"):
+        render_fixture(
+            component_paths,
+            detector_text=detector_text,
+            definition_text=definition_text,
         )
 
 

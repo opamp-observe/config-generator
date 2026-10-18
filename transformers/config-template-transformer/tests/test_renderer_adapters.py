@@ -13,12 +13,27 @@ from pathlib import Path
 import pytest
 from ruamel.yaml import YAML
 
-from config_template_transformer.adapters import FluentBitAdapter, get_target_adapter
-from config_template_transformer.constants import INPUTS_KEY, PIPELINE_KEY, UTF8_ENCODING
+from config_template_transformer.adapters import (
+    FluentBitAdapter,
+    OpenTelemetryCollectorContribAdapter,
+    get_target_adapter,
+)
+from config_template_transformer.constants import (
+    INPUTS_KEY,
+    PIPELINE_KEY,
+    PIPELINES_KEY,
+    RECEIVERS_KEY,
+    SERVICE_KEY,
+    UTF8_ENCODING,
+)
 from config_template_transformer.definitions import load_transform_definition
 from config_template_transformer.errors import TransformerError
 from config_template_transformer.renderer import JinjaFragmentRenderer
 from conftest import TRANSFORM_TEXT, write_text
+
+FILELOG_RECEIVER_NAME = "filelog/example"
+INCLUDE_LIST_KEY = "include"
+LOGS_PIPELINE_KEY = "logs"
 
 
 def test_renderer_enforces_limits_and_structure(tmp_path: Path) -> None:
@@ -115,3 +130,50 @@ def test_fluent_bit_adapter_validates_parent_and_registry(tmp_path: Path) -> Non
     adapter.inject_includes(duplicate_path, ["same.yaml"], output_path)
     output = YAML(typ="safe").load(output_path.read_text(encoding=UTF8_ENCODING))
     assert output["includes"] == ["same.yaml"]
+
+
+def test_otelcol_contrib_adapter_serializes_and_rejects_injection(tmp_path: Path) -> None:
+    """Serialize Collector mappings and direct composition to repeated CLI flags."""
+
+    definition_path = write_text(
+        tmp_path / "definition.yaml",
+        TRANSFORM_TEXT.replace("tool: fluent-bit", "tool: otelcol-contrib"),
+    )
+    definition = load_transform_definition(definition_path)
+    fragment = {
+        RECEIVERS_KEY: {
+            FILELOG_RECEIVER_NAME: {INCLUDE_LIST_KEY: ["/var/log/example.log"]}
+        },
+        SERVICE_KEY: {
+            PIPELINES_KEY: {
+                LOGS_PIPELINE_KEY: {RECEIVERS_KEY: [FILELOG_RECEIVER_NAME]}
+            }
+        },
+    }
+    adapter = get_target_adapter("otelcol-contrib")
+    assert isinstance(adapter, OpenTelemetryCollectorContribAdapter)
+    content = adapter.serialize_fragment(fragment, definition)
+    assert YAML(typ="safe").load(content.decode(UTF8_ENCODING)) == fragment
+    with pytest.raises(TransformerError, match="repeated --config"):
+        adapter.inject_includes(tmp_path / "parent.yaml", ["fragment.yaml"], tmp_path / "out")
+
+
+@pytest.mark.parametrize(
+    "fragment",
+    [
+        {},
+        {RECEIVERS_KEY: []},
+        {RECEIVERS_KEY: {"receiver": []}, SERVICE_KEY: {PIPELINES_KEY: {}}},
+        {RECEIVERS_KEY: {}, SERVICE_KEY: []},
+        {RECEIVERS_KEY: {}, SERVICE_KEY: {PIPELINES_KEY: []}},
+    ],
+)
+def test_otelcol_contrib_adapter_rejects_invalid_fragments(
+    tmp_path: Path,
+    fragment: dict[str, object],
+) -> None:
+    """Require Collector receiver and service-pipeline mappings."""
+
+    definition = load_transform_definition(write_text(tmp_path / "definition.yaml", TRANSFORM_TEXT))
+    with pytest.raises(TransformerError, match="OpenTelemetry Collector"):
+        OpenTelemetryCollectorContribAdapter().serialize_fragment(fragment, definition)

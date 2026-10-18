@@ -7,6 +7,6 @@
 """Generate versioned observability configuration fragments from detector results."""
 
 APPLICATION_NAME = "opamp-config-template-transformer"
-APPLICATION_VERSION = "0.2.0"
+APPLICATION_VERSION = "0.3.0"
 
 __all__ = ["APPLICATION_NAME", "APPLICATION_VERSION"]
