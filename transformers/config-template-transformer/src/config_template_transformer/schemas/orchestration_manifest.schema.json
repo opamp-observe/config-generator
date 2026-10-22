@@ -6,7 +6,7 @@
   "type": "object",
   "required": ["schema_version", "generated_at", "generator", "target", "source", "artifacts"],
   "properties": {
-    "schema_version": {"const": "2.0", "description": "Manifest contract version with template support metadata."},
+    "schema_version": {"const": "3.0", "description": "Manifest contract version with per-plugin detector provenance."},
     "generated_at": {"type": "string", "format": "date-time", "description": "UTC generation time."},
     "generator": {
       "type": "object",
@@ -41,7 +41,7 @@
       "type": "array",
       "items": {
         "type": "object",
-        "required": ["transform_name", "transform_version", "detector_name", "detector_version", "selection_status", "path", "sha256", "media_type", "plugin_count", "template", "include"],
+        "required": ["transform_name", "transform_version", "detector_name", "detector_version", "selection_status", "path", "sha256", "media_type", "plugin_count", "template", "include", "plugins"],
         "properties": {
           "transform_name": {"type": "string", "minLength": 1},
           "transform_version": {"type": "string", "minLength": 1},
@@ -52,6 +52,25 @@
           "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
           "media_type": {"type": "string", "minLength": 1},
           "plugin_count": {"type": "integer", "minimum": 0},
+          "plugins": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["plugin_id", "source_format", "human_link", "detector_link", "rule_name", "source_selector", "source_index", "properties", "configuration_sha256"],
+              "properties": {
+                "plugin_id": {"type": "string", "pattern": "^[a-z0-9._-]+-[0-9a-f]{12}$"},
+                "source_format": {"type": "string", "minLength": 1},
+                "human_link": {"type": "string", "minLength": 1},
+                "detector_link": {"type": "string", "pattern": "^detector://"},
+                "rule_name": {"type": "string", "minLength": 1},
+                "source_selector": {"type": "string", "minLength": 1},
+                "source_index": {"type": "integer", "minimum": 0},
+                "properties": {"type": "object"},
+                "configuration_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+              },
+              "additionalProperties": false
+            }
+          },
           "template": {
             "type": "object",
             "required": ["name", "path", "version", "api_version", "engine", "sha256", "metadata_path", "metadata_api_version", "metadata_sha256", "target", "supports"],

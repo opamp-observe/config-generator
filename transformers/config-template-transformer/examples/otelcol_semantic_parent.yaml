@@ -1,0 +1,13 @@
+# Copyright 2026 opamp.info
+# Licensed under the Apache License, Version 2.0.
+
+exporters:
+  debug: {}
+service:
+  telemetry:
+    logs:
+      level: debug
+  pipelines:
+    logs:
+      exporters:
+        - debug

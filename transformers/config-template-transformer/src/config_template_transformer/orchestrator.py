@@ -11,6 +11,7 @@ from __future__ import annotations
 import datetime as datetime_module
 import json
 import logging
+import re
 from pathlib import Path
 from typing import Any
 
@@ -58,6 +59,7 @@ from config_template_transformer.models import (
     GeneratorRecord,
     IncludeRecord,
     OrchestrationManifest,
+    PluginProvenanceRecord,
     SourceRecord,
     TargetRecord,
     TemplateMetadata,
@@ -319,9 +321,10 @@ class TransformationOrchestrator:
             detector_entries,
         )
         plugins: list[dict[str, Any]] = []
+        plugin_records: list[PluginProvenanceRecord] = []
         if detector_entry is not None:
             if selection_status == SELECTION_RENDERED:
-                plugins = self._build_plugins(definition, detector_entry)
+                plugins, plugin_records = self._build_plugins(definition, detector_entry)
 
         fragment = self.renderer.render(
             template_name=definition.template_name,
@@ -331,7 +334,6 @@ class TransformationOrchestrator:
         artifact_bytes = adapter.serialize_fragment(fragment, definition)
         destination = resolve_output_path(output_root, definition.artifact_path)
         write_bytes_atomically(destination, artifact_bytes)
-        template_path = self.renderer.template_path(definition.template_name)
         LOGGER.debug(
             "Rendered %s plugins for %s to %s",
             len(plugins),
@@ -356,7 +358,7 @@ class TransformationOrchestrator:
                 version=definition.template_version,
                 api_version=definition.template_api_version,
                 engine=template_metadata.engine,
-                sha256=sha256_file(template_path),
+                sha256=sha256_file(self.renderer.template_path(definition.template_name)),
                 metadata_path=definition.template_metadata_name,
                 metadata_api_version=template_metadata.api_version,
                 metadata_sha256=sha256_file(metadata_path),
@@ -375,6 +377,7 @@ class TransformationOrchestrator:
                 path=definition.include_path,
                 literal=True,
             ),
+            plugins=tuple(plugin_records),
         )
 
     @staticmethod
@@ -465,7 +468,7 @@ class TransformationOrchestrator:
         self,
         definition: TransformDefinition,
         detector_entry: dict[str, Any],
-    ) -> list[dict[str, Any]]:
+    ) -> tuple[list[dict[str, Any]], list[PluginProvenanceRecord]]:
         """Evaluate RFC 9535 rules and deterministically deduplicate plugins.
 
         Args:
@@ -473,18 +476,19 @@ class TransformationOrchestrator:
             detector_entry: Compatible detected product result.
 
         Returns:
-            Ordered JSON-compatible plugin mappings.
+            Ordered plugin mappings and their detector provenance records.
 
         Raises:
             TransformerError: JSONPath evaluation fails or exceeds the safety limit.
         """
 
         plugins: list[dict[str, Any]] = []
+        plugin_records: list[PluginProvenanceRecord] = []
         seen_identities: set[str] = set()
         try:
             for rule in definition.rules:
                 source_nodes = jsonpath.find(rule.for_each, detector_entry)
-                for source_node in source_nodes:
+                for source_index, source_node in enumerate(source_nodes):
                     plugin = self._build_plugin_fields(rule, source_node.value, definition.name)
                     if plugin is None:
                         continue
@@ -494,11 +498,23 @@ class TransformationOrchestrator:
                             seen_identities,
                             plugin,
                             definition.name,
+                            plugin_records,
+                            definition,
+                            rule,
+                            source_index,
+                            str(detector_entry[DETECTOR_VERSION_KEY]),
                         )
                         continue
                     path_nodes = jsonpath.find(rule.path_from, source_node.value)
                     for path_node in path_nodes:
-                        if isinstance(path_node.value, str) and path_node.value.strip():
+                        if (
+                            isinstance(path_node.value, str)
+                            and path_node.value.strip()
+                            and (
+                                rule.path_match is None
+                                or re.search(rule.path_match, path_node.value.strip()) is not None
+                            )
+                        ):
                             path_plugin = dict(plugin)
                             path_plugin[PATH_KEY] = path_node.value.strip()
                             self._append_unique_plugin(
@@ -506,12 +522,17 @@ class TransformationOrchestrator:
                                 seen_identities,
                                 path_plugin,
                                 definition.name,
+                                plugin_records,
+                                definition,
+                                rule,
+                                source_index,
+                                str(detector_entry[DETECTOR_VERSION_KEY]),
                             )
         except jsonpath.JSONPathError as error:
             raise TransformerError(
                 f"JSONPath evaluation failed for transform {definition.name}: {error}"
             ) from error
-        return plugins
+        return plugins, plugin_records
 
     @staticmethod
     def _build_plugin_fields(
@@ -551,6 +572,11 @@ class TransformationOrchestrator:
         seen_identities: set[str],
         plugin: dict[str, Any],
         definition_name: str,
+        plugin_records: list[PluginProvenanceRecord],
+        definition: TransformDefinition,
+        rule: TransformRule,
+        source_index: int,
+        detector_version: str,
     ) -> None:
         """Append a new deterministic plugin and enforce the configured limit.
 
@@ -559,6 +585,11 @@ class TransformationOrchestrator:
             seen_identities: Canonical JSON identities already emitted.
             plugin: Candidate plugin object to deduplicate.
             definition_name: Transform identity used in limit errors.
+            plugin_records: Destination for generated provenance records.
+            definition: Transform that created the plugin.
+            rule: Rule that selected the detector row.
+            source_index: Zero-based index within the rule selection.
+            detector_version: Exact detector version from the result document.
 
         Raises:
             TransformerError: The plugin count exceeds the safety limit.
@@ -574,6 +605,30 @@ class TransformationOrchestrator:
             return
         seen_identities.add(identity)
         plugins.append(plugin)
+        configuration_sha256 = sha256_bytes(identity.encode("utf-8"))
+        plugin_id = f"{definition.detector_name}.{rule.name}-{configuration_sha256[:12]}"
+        source_selector = f"{rule.for_each}#{source_index}"
+        detector_link = (
+            f"detector://{definition.detector_name}/{detector_version}"
+            f"/{rule.name}/{source_index}"
+        )
+        plugin_records.append(
+            PluginProvenanceRecord(
+                plugin_id=plugin_id,
+                source_format=rule.source_format,
+                human_link=(
+                    f"Input {plugin_id} was generated by detector "
+                    f"{definition.detector_name} using transform rule {rule.name} "
+                    f"from selection {source_selector}."
+                ),
+                detector_link=detector_link,
+                rule_name=rule.name,
+                source_selector=source_selector,
+                source_index=source_index,
+                properties=plugin,
+                configuration_sha256=configuration_sha256,
+            )
+        )
         if len(plugins) > self.max_plugin_count:
             raise TransformerError(
                 f"Transform {definition_name} exceeds plugin limit {self.max_plugin_count}"

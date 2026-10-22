@@ -1,0 +1,32 @@
+{
+  "_comment": "Copyright 2026 opamp.info; licensed under the Apache License, Version 2.0.",
+  "api_version": "opamp.info/v1alpha1",
+  "kind": "OpenTelemetrySemanticMapping",
+  "metadata": {"name": "nginx_error", "version": "1.0.0"},
+  "spec": {
+    "detector": {"name": "nginx_1", "version_constraint": ">=1,<2"},
+    "source": {
+      "formats": ["nginx.auto", "nginx.error"],
+      "path_regex": "(?i)error[^/]*\\.log$",
+      "priority": 100
+    },
+    "semantic_conventions": {"version": "1.44.0", "signal": "logs"},
+    "parse": {
+      "type": "regex",
+      "expression": "^(?P<timestamp>\\d{4}/\\d{2}/\\d{2} \\d{2}:\\d{2}:\\d{2}) \\[(?P<severity>[^\\]]+)\\] (?P<process_id>\\d+)#(?P<thread_id>\\d+): (?:\\*(?P<connection_id>\\d+) )?(?P<message>.*)$",
+      "time_field": "timestamp",
+      "time_format": "%Y/%m/%d %H:%M:%S",
+      "severity_field": "severity"
+    },
+    "payload": {
+      "body_from": "message",
+      "field_mappings": {
+        "connection_id": "nginx.connection.id",
+        "process_id": "process.pid",
+        "thread_id": "thread.id"
+      },
+      "resource_attributes": {"service.name": "nginx", "service.namespace": "web"},
+      "record_attributes": {"event.name": "nginx.error", "log.type": "error"}
+    }
+  }
+}

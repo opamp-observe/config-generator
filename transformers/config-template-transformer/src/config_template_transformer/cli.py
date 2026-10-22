@@ -17,6 +17,7 @@ from config_template_transformer import APPLICATION_NAME, APPLICATION_VERSION
 from config_template_transformer.constants import (
     COMMAND_INJECT,
     COMMAND_RENDER,
+    COMMAND_SEMANTIC_MAP,
     DEFAULT_LOG_FORMAT,
     EXIT_SUCCESS,
     EXIT_TRANSFORM_ERROR,
@@ -26,6 +27,7 @@ from config_template_transformer.orchestrator import (
     TransformationOrchestrator,
     inject_manifest_includes,
 )
+from config_template_transformer.semantic_orchestrator import SemanticMappingOrchestrator
 
 LOGGER = logging.getLogger(__name__)
 DEFAULT_TEMPLATE_ROOT = Path(__file__).parent / "templates"
@@ -97,6 +99,26 @@ def build_parser() -> argparse.ArgumentParser:
         type=Path,
         help="Artifact root; defaults to the manifest directory.",
     )
+    semantic_parser = subparsers.add_parser(
+        COMMAND_SEMANTIC_MAP,
+        help="Generate semantic payload configuration from a verified render manifest.",
+    )
+    semantic_parser.add_argument("--manifest", type=Path, required=True)
+    semantic_parser.add_argument("--detector-results", type=Path, required=True)
+    semantic_source_group = semantic_parser.add_mutually_exclusive_group(required=True)
+    semantic_source_group.add_argument(
+        "--mapping-root",
+        type=Path,
+        help="Semantic mapping catalogue selected by detector, format, and path.",
+    )
+    semantic_source_group.add_argument(
+        "--mapping",
+        type=Path,
+        action="append",
+        help="Explicit semantic mapping; repeat to supply a manually controlled set.",
+    )
+    semantic_parser.add_argument("--output-root", type=Path, required=True)
+    semantic_parser.add_argument("--semantic-manifest-output", type=Path, required=True)
     return parser
 
 
@@ -135,6 +157,16 @@ def run(arguments: argparse.Namespace) -> None:
             parent_path=arguments.parent_config,
             output_path=arguments.output,
             artifact_root=arguments.artifact_root,
+        )
+        return
+    if arguments.command == COMMAND_SEMANTIC_MAP:
+        SemanticMappingOrchestrator().generate(
+            orchestration_manifest_path=arguments.manifest,
+            detector_results_path=arguments.detector_results,
+            output_root=arguments.output_root,
+            semantic_manifest_output=arguments.semantic_manifest_output,
+            mapping_root=arguments.mapping_root,
+            mapping_paths=arguments.mapping,
         )
         return
     raise TransformerError(f"Unsupported command: {arguments.command}")

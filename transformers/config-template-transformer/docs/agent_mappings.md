@@ -90,6 +90,10 @@ row. Optional `fields_from` maps output property names to JSONPath selectors
 evaluated against that row, with exactly one match required for each field. A
 missing dynamic field skips the row; multiple matches are rejected because
 their intended pairing would be ambiguous.
+Optional `path_match` restricts selected paths with a regular expression, which
+is useful when evidence also contains explanatory candidates. Optional
+`source_format` is copied to per-plugin provenance for the semantic mapping
+stage; omitted values become `unstructured`.
 
 ## How mapping rules are established
 
@@ -138,6 +142,8 @@ a template property does not automatically populate it from detector output.
 | `values` | Not evaluated | Starts each normalized plugin object with fixed JSON-compatible values. |
 | `fields_from` | Each row returned by `for_each` | Copies one scalar match into each named output attribute. A missing match skips that row; multiple matches are an error. |
 | `path_from` | Each row returned by `for_each` | Emits a plugin for every non-empty string match, placing the trimmed value in `path`. It is optional for plugins without a file path. |
+| `path_match` | Each non-empty `path_from` value | Emits only paths matching the regular expression. |
+| `source_format` | Emitted plugin provenance | Selects an optional semantic payload mapping without becoming an agent plugin property. |
 
 Values are applied in this order:
 

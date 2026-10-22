@@ -40,6 +40,13 @@ from conftest import TRANSFORM_TEXT, write_text
             TRANSFORM_TEXT.replace("fluent_bit_inputs.metadata.yaml", "../escape.metadata.yaml"),
             "must stay relative",
         ),
+        (
+            TRANSFORM_TEXT.replace(
+                "      path_from: $.path_or_destination\n",
+                "      path_from: $.path_or_destination\n      path_match: '[invalid'\n",
+            ),
+            "Invalid path_match",
+        ),
     ],
 )
 def test_definition_rejects_invalid_values(

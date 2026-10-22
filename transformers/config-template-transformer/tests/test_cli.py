@@ -132,7 +132,7 @@ def test_cli_parser_version_and_unknown_dispatch(capsys: pytest.CaptureFixture[s
     with pytest.raises(SystemExit) as exit_error:
         build_parser().parse_args(["--version"])
     assert exit_error.value.code == 0
-    assert "0.3.0" in capsys.readouterr().out
+    assert "0.4.0" in capsys.readouterr().out
 
     with pytest.raises(TransformerError, match="Unsupported command"):
         run(argparse.Namespace(command="unknown"))

@@ -1,0 +1,29 @@
+{
+  "_comment": "Copyright 2026 opamp.info; licensed under the Apache License, Version 2.0.",
+  "api_version": "opamp.info/v1alpha1",
+  "kind": "ObservabilityAgentMapping",
+  "metadata": {"name": "otelcol_contrib_0_163_postgresql_17", "version": "1.0.0"},
+  "spec": {
+    "detector": {"name": "postgresql_17", "version_constraint": ">=1,<2"},
+    "agent": {"type": "otelcol-contrib", "minimum_version": "0.163.0"},
+    "output": {
+      "path": "generated/otelcol-contrib/postgresql_17.yaml",
+      "include_path": "generated/otelcol-contrib/postgresql_17.yaml"
+    },
+    "render": {
+      "engine": "jinja2",
+      "template": "otelcol_contrib_filelog.yaml.j2",
+      "metadata_file": "otelcol_contrib_filelog.metadata.yaml",
+      "version": "1.0.0",
+      "template_api_version": "1.0",
+      "context_name": "plugins"
+    },
+    "rules": [{
+      "name": "postgresql_logs",
+      "for_each": "$.queries.log_locations[*]",
+      "path_from": "$.log_directory_candidate",
+      "source_format": "postgresql.stderr",
+      "values": {"kind": "filelog", "path_suffix": "/*.log", "start_at": "beginning"}
+    }]
+  }
+}

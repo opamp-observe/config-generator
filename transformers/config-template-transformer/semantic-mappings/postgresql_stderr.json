@@ -1,0 +1,28 @@
+{
+  "_comment": "Copyright 2026 opamp.info; licensed under the Apache License, Version 2.0.",
+  "api_version": "opamp.info/v1alpha1",
+  "kind": "OpenTelemetrySemanticMapping",
+  "metadata": {"name": "postgresql_stderr", "version": "1.0.0"},
+  "spec": {
+    "detector": {"name": "postgresql_17", "version_constraint": ">=1,<20"},
+    "source": {"formats": ["postgresql.stderr", "postgresql.auto"], "priority": 10},
+    "semantic_conventions": {"version": "1.44.0", "signal": "logs"},
+    "parse": {
+      "type": "regex",
+      "expression": "^(?P<timestamp>\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2}(?:\\.\\d+)? [A-Z]+) \\[(?P<process_id>\\d+)\\] (?:(?P<db_user>[^@ ]+)@(?P<db_namespace>[^ ]+) )?(?P<severity>[A-Z0-9]+):  (?P<message>.*)$",
+      "time_field": "timestamp",
+      "time_format": "%Y-%m-%d %H:%M:%S.%L %Z",
+      "severity_field": "severity"
+    },
+    "payload": {
+      "body_from": "message",
+      "field_mappings": {
+        "db_namespace": "db.namespace",
+        "db_user": "postgresql.user.name",
+        "process_id": "process.pid"
+      },
+      "resource_attributes": {"service.name": "postgresql"},
+      "record_attributes": {"db.system.name": "postgresql", "event.name": "postgresql.log", "log.type": "stderr"}
+    }
+  }
+}

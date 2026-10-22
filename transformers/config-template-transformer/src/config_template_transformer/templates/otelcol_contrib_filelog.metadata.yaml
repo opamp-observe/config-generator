@@ -1,0 +1,22 @@
+# Copyright 2026 opamp.info
+# Licensed under the Apache License, Version 2.0.
+
+api_version: opamp.info/v1alpha1
+kind: ObservabilityTemplateMetadata
+metadata:
+  name: otelcol_contrib_filelog
+  version: 1.0.0
+spec:
+  engine: jinja2
+  template: otelcol_contrib_filelog.yaml.j2
+  template_api_version: "1.0"
+  target:
+    tool: otelcol-contrib
+    version_constraint: ">=0.163"
+  supports:
+    artifact_kind: collector-config-fragment
+    signals:
+      - logs
+    capabilities:
+      - filelog-receivers
+      - multiple-config-files

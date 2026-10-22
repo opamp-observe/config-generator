@@ -1,0 +1,12 @@
+# Copyright 2026 opamp.info
+# Licensed under the Apache License, Version 2.0.
+
+service:
+  flush: 1
+  log_level: debug
+includes:
+  - generated/fluent-bit/semantic-normalization.yaml
+pipeline:
+  outputs:
+    - name: stdout
+      match: "*"

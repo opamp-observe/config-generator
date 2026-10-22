@@ -670,6 +670,7 @@ It should support two modes:
 | 5 | MongoDB detector, logging mappings, and container scenarios | Phases 1–2 | Standalone MongoDB logs/metrics pass detection, generation, and live smoke tests. |
 | 6 | Version-audit utility and scheduled validation-gap workflow | Phase 2 result index | New agent releases produce actionable covered/validation/mapping statuses. |
 | 7 | Vector, Fluentd, Alloy, Elastic, and Telegraf expansion | Phases 1–3 and 6 | Each added adapter has mappings, native validation, evidence, and matrix entries. |
+| 8 | Adaptive dashboard generation | Normalized telemetry contracts and regression evidence | Backend-neutral blueprints compile into validated Grafana and Kibana artifacts for supported storage backends. |
 
 Workstreams may progress in parallel where their contracts do not conflict. In
 particular, the result/evidence format and offline version audit can begin while
@@ -702,7 +703,13 @@ This roadmap is complete when:
 - every advertised compatibility claim has containerized regression evidence;
 - CI publishes structured results and sanitized ZIP archives; and
 - maintainers can identify new agent versions and mapping/validation gaps with
-  one utility command.
+  one utility command; and
+- transformer outputs can drive validated, backend-adaptive dashboard bundles
+  with explicit coverage and provenance.
+
+The detailed dashboard architecture, agent roles, contracts, validation gates,
+and delivery phases are defined in the
+[adaptive dashboard generation proposal](adaptive_dashboard_generation.md).
 
 ## Open design decisions
 

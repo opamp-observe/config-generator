@@ -27,6 +27,7 @@ spec:
     - name: candidate_log_directories
       for_each: $.queries.log_locations[*]
       path_from: $.log_directory_candidate
+      source_format: postgresql.stderr
       values:
         name: tail
         tag: opamp.postgresql.17

@@ -26,7 +26,8 @@ mkdir -p "${artifact_root}"
 
 # Trust is confined to this unpublished, single-container regression deployment.
 export POSTGRES_HOST_AUTH_METHOD=trust
-docker-entrypoint.sh postgres >"${artifact_root}/postgresql-service.log" 2>&1 &
+export PGDATA=/var/lib/postgresql/17/data
+docker-entrypoint.sh postgres -D "${PGDATA}" >"${artifact_root}/postgresql-service.log" 2>&1 &
 postgres_launcher_pid=$!
 nginx -t >"${artifact_root}/nginx-service.log" 2>&1
 nginx >>"${artifact_root}/nginx-service.log" 2>&1
@@ -49,17 +50,45 @@ python3 /opt/opamp-config-gen/runner.py \
 
 /opt/config-transformer-venv/bin/obs-config-transformer render \
     --detector-results "${artifact_root}/detector-results.json" \
-    --definition /opt/opamp-config-gen/transformers/config-template-transformer/examples/transforms/nginx_1_logs.yaml \
-    --definition /opt/opamp-config-gen/transformers/config-template-transformer/examples/transforms/postgresql_17_logs.yaml \
+    --mapping-root /opt/opamp-config-gen/transformers/config-template-transformer/mappings \
+    --target-tool fluent-bit \
     --output-root "${artifact_root}" \
-    --manifest-output "${artifact_root}/orchestration.json" \
-    --target-version 4.2.8
+    --manifest-output "${artifact_root}/orchestration-fluent-bit.json" \
+    --target-version 5.1.0
 
 /opt/config-transformer-venv/bin/obs-config-transformer inject \
-    --manifest "${artifact_root}/orchestration.json" \
+    --manifest "${artifact_root}/orchestration-fluent-bit.json" \
     --artifact-root "${artifact_root}" \
     --parent-config /opt/opamp-config-gen/transformers/config-template-transformer/examples/fluent_bit_parent.yaml \
-    --output "${artifact_root}/fluent-bit.yaml"
+    --output "${artifact_root}/fluent-bit-source.yaml"
+
+/opt/config-transformer-venv/bin/obs-config-transformer semantic-map \
+    --manifest "${artifact_root}/orchestration-fluent-bit.json" \
+    --detector-results "${artifact_root}/detector-results.json" \
+    --mapping-root /opt/opamp-config-gen/transformers/config-template-transformer/semantic-mappings \
+    --output-root "${artifact_root}" \
+    --semantic-manifest-output "${artifact_root}/semantic-manifest-fluent-bit.json"
+
+cp /opt/opamp-config-gen/transformers/config-template-transformer/examples/fluent_bit_semantic_parent.yaml \
+    "${artifact_root}/fluent-bit-semantic.yaml"
+
+/opt/config-transformer-venv/bin/obs-config-transformer render \
+    --detector-results "${artifact_root}/detector-results.json" \
+    --mapping-root /opt/opamp-config-gen/transformers/config-template-transformer/mappings \
+    --target-tool otelcol-contrib \
+    --output-root "${artifact_root}" \
+    --manifest-output "${artifact_root}/orchestration-otelcol.json" \
+    --target-version 0.163.0
+
+/opt/config-transformer-venv/bin/obs-config-transformer semantic-map \
+    --manifest "${artifact_root}/orchestration-otelcol.json" \
+    --detector-results "${artifact_root}/detector-results.json" \
+    --mapping-root /opt/opamp-config-gen/transformers/config-template-transformer/semantic-mappings \
+    --output-root "${artifact_root}" \
+    --semantic-manifest-output "${artifact_root}/semantic-manifest-otelcol.json"
+
+cp /opt/opamp-config-gen/transformers/config-template-transformer/examples/otelcol_semantic_parent.yaml \
+    "${artifact_root}/otelcol-semantic-parent.yaml"
 
 /opt/config-transformer-venv/bin/python \
     /opt/opamp-config-gen/tests/regression/verify_artifacts.py \

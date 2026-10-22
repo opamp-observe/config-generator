@@ -23,6 +23,8 @@
         "name": "nginx_logs",
         "for_each": "$.queries.log_locations[*]",
         "path_from": "$.path_or_destination",
+        "path_match": "(?i)(access|error)[^;]*\\.log$",
+        "source_format": "nginx.auto",
         "values": {"name": "tail", "tag": "nginx.logs", "read_from_head": true}
       },
       {

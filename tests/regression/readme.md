@@ -6,10 +6,11 @@ Licensed under the Apache License, Version 2.0.
 # NGINX and PostgreSQL regression container
 
 This regression image starts real NGINX and PostgreSQL 17 deployments in one
-container, runs the `nginx_1` and `postgresql_17` osquery detectors, and passes
-their aggregate JSON through both Fluent Bit transforms. It is intentionally
-not a complete observability deployment: it verifies discovery, transformation,
-manifest generation, fragment generation, and parent include composition.
+container, runs the `nginx_1` and `postgresql_17` osquery detectors, renders
+source configurations for Fluent Bit and OpenTelemetry Collector Contrib, and
+runs the optional semantic payload stage for both agents. It verifies
+discovery, per-plugin provenance, transformation, semantic mapping, manifests,
+fragment generation, and Fluent Bit parent composition.
 
 The image is based on the official PostgreSQL 17 Bookworm image. It installs
 the Debian NGINX package and copies the self-contained `osqueryd` binary from
@@ -44,19 +45,25 @@ py -3 -m unittest tests.test_regression_container
 ## Produced artifacts
 
 - `detector-results.json`: aggregate osquery results for both deployments;
-- `orchestration.json`: versioned transformer manifest with checksums and
-  template support metadata;
-- `generated/nginx_1.inputs.yaml`: generated NGINX Fluent Bit inputs;
-- `generated/postgresql_17.inputs.yaml`: generated PostgreSQL Fluent Bit input;
-- `fluent-bit.yaml`: parent configuration containing both literal includes;
+- `orchestration-fluent-bit.json` and `orchestration-otelcol.json`: versioned
+  source-transform manifests with per-plugin detector links;
+- `semantic-manifest-fluent-bit.json` and `semantic-manifest-otelcol.json`:
+  selected semantic mappings and checksums;
+- `generated/fluent-bit/`: source fragments plus final semantic YAML and Lua;
+- `generated/otelcol-contrib/`: source fragments plus final semantic YAML;
+- `otelcol-semantic-parent.yaml`: deployment-owned debug exporter used to
+  validate the generated Collector fragment;
+- `fluent-bit-source.yaml`: parent containing the source-only includes;
+- `fluent-bit-semantic.yaml`: demonstration parent containing the final
+  semantic configuration;
 - `nginx-service.log` and `postgresql-service.log`: deployment diagnostics;
 - `regression-verification.json`: success report written only after validation.
 
 `verify_artifacts.py` requires both detectors to match without errors, requires
-log-location evidence, checks both manifest records and SHA-256 digests,
-requires non-empty `pipeline.inputs` fragments, and verifies that the assembled
-parent includes both fragments. Any failed check makes the container exit
-non-zero.
+log-location evidence, checks source and semantic manifests and SHA-256
+digests, validates every plugin detector link, requires NGINX access/error and
+PostgreSQL mappings for both agents, and verifies the assembled source parent.
+Any failed check makes the container exit non-zero.
 
 PostgreSQL trust authentication is enabled only inside this disposable,
 unpublished regression container. The image and generated configuration are

@@ -1,0 +1,37 @@
+{
+  "_comment": "Copyright 2026 opamp.info; licensed under the Apache License, Version 2.0.",
+  "api_version": "opamp.info/v1alpha1",
+  "kind": "OpenTelemetrySemanticMapping",
+  "metadata": {"name": "postgresql_csvlog", "version": "1.0.0"},
+  "spec": {
+    "detector": {"name": "postgresql_17", "version_constraint": ">=1,<20"},
+    "source": {
+      "formats": ["postgresql.csv", "postgresql.auto"],
+      "path_regex": "(?i)\\.csv$|csvlog",
+      "priority": 100
+    },
+    "semantic_conventions": {"version": "1.44.0", "signal": "logs"},
+    "parse": {
+      "type": "csv",
+      "columns": ["timestamp", "db_user", "db_namespace", "process_id", "client_address", "session_id", "session_line_number", "command_tag", "session_start_time", "virtual_transaction_id", "transaction_id", "severity", "sql_state", "message", "detail", "hint", "internal_query", "internal_query_position", "context", "query", "query_position", "location", "application_name", "backend_type", "leader_process_id", "query_id"],
+      "time_field": "timestamp",
+      "time_format": "%Y-%m-%d %H:%M:%S.%L %Z",
+      "severity_field": "severity"
+    },
+    "payload": {
+      "body_from": "message",
+      "field_mappings": {
+        "application_name": "postgresql.application.name",
+        "client_address": "client.address",
+        "command_tag": "db.operation.name",
+        "db_namespace": "db.namespace",
+        "db_user": "postgresql.user.name",
+        "process_id": "process.pid",
+        "query": "db.query.text",
+        "sql_state": "db.response.status_code"
+      },
+      "resource_attributes": {"service.name": "postgresql"},
+      "record_attributes": {"db.system.name": "postgresql", "event.name": "postgresql.log", "log.type": "csv"}
+    }
+  }
+}

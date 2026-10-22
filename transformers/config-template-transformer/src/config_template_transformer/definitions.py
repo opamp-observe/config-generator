@@ -8,6 +8,7 @@
 
 from __future__ import annotations
 
+import re
 from pathlib import Path, PurePosixPath
 from typing import Any
 
@@ -18,6 +19,7 @@ from ruamel.yaml import YAML, YAMLError
 from config_template_transformer.constants import (
     API_VERSION_KEY,
     CONTEXT_NAME_KEY,
+    DEFAULT_SOURCE_FORMAT,
     DETECTOR_KEY,
     FIELDS_FROM_KEY,
     FOR_EACH_KEY,
@@ -28,8 +30,10 @@ from config_template_transformer.constants import (
     OUTPUT_KEY,
     PATH_FROM_KEY,
     PATH_KEY,
+    PATH_MATCH_KEY,
     RENDER_KEY,
     RULES_KEY,
+    SOURCE_FORMAT_KEY,
     SPEC_KEY,
     TARGET_KEY,
     TEMPLATE_API_VERSION_KEY,
@@ -102,16 +106,26 @@ def build_transform_definition(
     _validate_relative_path(PurePosixPath(render[TEMPLATE_KEY]), "template path")
     _validate_relative_path(PurePosixPath(render[METADATA_FILE_KEY]), "template metadata path")
 
-    rules = tuple(
-        TransformRule(
+    rules_list: list[TransformRule] = []
+    for rule in specification[RULES_KEY]:
+        path_match = rule.get(PATH_MATCH_KEY)
+        if path_match is not None:
+            try:
+                re.compile(path_match)
+            except re.error as error:
+                raise TransformerError(
+                    f"Invalid path_match in transform {definition_path}: {error}"
+                ) from error
+        rules_list.append(TransformRule(
             name=rule[NAME_KEY],
             for_each=rule[FOR_EACH_KEY],
             path_from=rule.get(PATH_FROM_KEY),
+            path_match=path_match,
             fields_from=dict(rule.get(FIELDS_FROM_KEY, {})),
             values=dict(rule[VALUES_KEY]),
-        )
-        for rule in specification[RULES_KEY]
-    )
+                source_format=rule.get(SOURCE_FORMAT_KEY, DEFAULT_SOURCE_FORMAT),
+        ))
+    rules = tuple(rules_list)
     return TransformDefinition(
         api_version=document[API_VERSION_KEY],
         name=metadata[NAME_KEY],

@@ -1,0 +1,23 @@
+# Copyright 2026 opamp.info
+# Licensed under the Apache License, Version 2.0.
+
+{% if plugins %}
+receivers:
+{% for plugin in plugins %}
+  filelog/source_{{ loop.index }}:
+    include:
+      - {{ (plugin.path ~ (plugin.path_suffix | default(""))) | tojson }}
+    start_at: {{ plugin.start_at | default("end") | tojson }}
+{% endfor %}
+service:
+  pipelines:
+    logs:
+      receivers:
+{% for plugin in plugins %}
+        - filelog/source_{{ loop.index }}
+{% endfor %}
+{% else %}
+receivers: {}
+service:
+  pipelines: {}
+{% endif %}

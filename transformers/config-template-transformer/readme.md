@@ -12,6 +12,13 @@ Bit or OpenTelemetry Collector Contrib. The transformer renders sandboxed
 Jinja, writes a JSON orchestration manifest, and can inject Fluent Bit's
 literal include paths into a broader YAML configuration.
 
+An optional `semantic-map` stage consumes the verified orchestration manifest
+and declarative payload mappings to generate OpenTelemetry-shaped log records.
+It records per-plugin links to detector evidence and has implementations behind
+the common `SemanticConfigurationAdapter` interface for Fluent Bit and
+OpenTelemetry Collector Contrib. See the repository
+[`semantic_payload_mapping.md`](../../docs/semantic_payload_mapping.md) guide.
+
 Every Jinja template has validated YAML metadata declaring its semantic
 version, context API version, capabilities, observability signals, target tool,
 and supported tool-version range. See the
@@ -32,6 +39,11 @@ The repository-level
 [`observability_configuration_roadmap.md`](../../docs/roadmap/observability_configuration_roadmap.md)
 defines the planned log-source, database, agent, regression, and version-audit
 workstreams.
+The related
+[`adaptive_dashboard_generation.md`](../../docs/roadmap/adaptive_dashboard_generation.md)
+proposal explains how transformer provenance and telemetry contracts can drive
+validated dashboard bundles for multiple query backends and visualization
+surfaces.
 
 The selection and rendering core is tool-neutral. Target-specific validation,
 serialization, and include behavior live behind a `TargetAdapter` contract so
@@ -49,5 +61,5 @@ py -3 -m venv .venv
 
 The CLI is installed as `obs-config-transformer`. See
 [`docs/usage.md`](docs/usage.md) for the rendering, JSON handoff, injection,
-and Fluent Bit validation workflow.
+semantic mapping, and Fluent Bit validation workflow.
 

@@ -1,0 +1,40 @@
+{
+  "_comment": "Copyright 2026 opamp.info; licensed under the Apache License, Version 2.0.",
+  "api_version": "opamp.info/v1alpha1",
+  "kind": "OpenTelemetrySemanticMapping",
+  "metadata": {"name": "nginx_access_combined", "version": "1.0.0"},
+  "spec": {
+    "detector": {"name": "nginx_1", "version_constraint": ">=1,<2"},
+    "source": {
+      "formats": ["nginx.auto", "nginx.access.combined"],
+      "path_regex": "(?i)(access|request)[^/]*\\.log$",
+      "priority": 100
+    },
+    "semantic_conventions": {"version": "1.44.0", "signal": "logs"},
+    "parse": {
+      "type": "regex",
+      "expression": "^(?P<client_address>\\S+) \\S+ \\S+ \\[(?P<timestamp>[^\\]]+)\\] \\\"(?P<http_request_method>\\S+) (?P<url_original>\\S+) HTTP/(?P<network_protocol_version>[^\\\"]+)\\\" (?P<http_response_status_code>\\d{3}) (?P<http_response_body_size>\\S+) \\\"(?P<http_request_referer>[^\\\"]*)\\\" \\\"(?P<user_agent_original>[^\\\"]*)\\\"$",
+      "time_field": "timestamp",
+      "time_format": "%d/%b/%Y:%H:%M:%S %z",
+      "types": {
+        "http_response_body_size": "integer",
+        "http_response_status_code": "integer"
+      }
+    },
+    "payload": {
+      "body_from": "url_original",
+      "field_mappings": {
+        "client_address": "client.address",
+        "http_request_method": "http.request.method",
+        "http_request_referer": "url.referrer",
+        "http_response_body_size": "http.response.body.size",
+        "http_response_status_code": "http.response.status_code",
+        "network_protocol_version": "network.protocol.version",
+        "url_original": "url.original",
+        "user_agent_original": "user_agent.original"
+      },
+      "resource_attributes": {"service.name": "nginx", "service.namespace": "web"},
+      "record_attributes": {"event.name": "http.server.request", "log.type": "access"}
+    }
+  }
+}

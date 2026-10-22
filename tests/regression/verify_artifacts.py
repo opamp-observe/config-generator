@@ -34,13 +34,35 @@ SHA256_KEY = "sha256"
 TRANSFORM_NAME_KEY = "transform_name"
 
 EXPECTED_DETECTORS = frozenset(("nginx_1", "postgresql_17"))
-EXPECTED_TRANSFORMS = frozenset(("nginx_1_logs", "postgresql_17_logs"))
+EXPECTED_TRANSFORMS = {
+    "fluent-bit": frozenset(("fluent_bit_5_nginx_1", "fluent_bit_5_postgresql_17")),
+    "otelcol-contrib": frozenset(
+        ("otelcol_contrib_0_163_nginx_1", "otelcol_contrib_0_163_postgresql_17")
+    ),
+}
 EXPECTED_ARTIFACT_PATHS = frozenset(
     (
-        "generated/nginx_1.inputs.yaml",
-        "generated/postgresql_17.inputs.yaml",
+        "generated/fluent-bit/nginx.inputs.yaml",
+        "generated/fluent-bit/postgresql_17.inputs.yaml",
     )
 )
+EXPECTED_OTELCOL_ARTIFACT_PATHS = frozenset(
+    (
+        "generated/otelcol-contrib/nginx.yaml",
+        "generated/otelcol-contrib/postgresql_17.yaml",
+    )
+)
+EXPECTED_SEMANTIC_ARTIFACTS = {
+    "fluent-bit": frozenset(
+        (
+            "generated/fluent-bit/semantic-normalization.yaml",
+            "generated/fluent-bit/semantic-normalization.lua",
+        )
+    ),
+    "otelcol-contrib": frozenset(
+        ("generated/otelcol-contrib/semantic-normalization.yaml",)
+    ),
+}
 RENDERED_SELECTION_STATUS = "rendered"
 REPORT_ARTIFACTS_KEY = "artifacts"
 REPORT_DETECTORS_KEY = "detectors"
@@ -121,12 +143,19 @@ def validate_detector_results(detector_results: dict[str, Any]) -> None:
             raise RegressionValidationError(f"Detector has no log evidence: {detector_name}")
 
 
-def validate_orchestration(artifact_root: Path, manifest: dict[str, Any]) -> None:
+def validate_orchestration(
+    artifact_root: Path,
+    manifest: dict[str, Any],
+    expected_artifact_paths: frozenset[str],
+    target_tool: str,
+) -> None:
     """Require rendered, checksummed artifacts for both product transforms.
 
     Args:
         artifact_root: Directory containing the generated artifact tree.
         manifest: Orchestration JSON emitted by the transformer.
+        expected_artifact_paths: Exact target-specific first-stage paths.
+        target_tool: Agent whose transform identities are expected.
 
     Raises:
         RegressionValidationError: A fragment or manifest record is inconsistent.
@@ -140,7 +169,7 @@ def validate_orchestration(artifact_root: Path, manifest: dict[str, Any]) -> Non
         for artifact in artifact_entries
         if isinstance(artifact, dict)
     }
-    if transform_names != EXPECTED_TRANSFORMS:
+    if transform_names != EXPECTED_TRANSFORMS[target_tool]:
         raise RegressionValidationError("Manifest does not contain both transforms")
 
     yaml_parser = YAML(typ="safe")
@@ -158,9 +187,19 @@ def validate_orchestration(artifact_root: Path, manifest: dict[str, Any]) -> Non
         if artifact[PLUGIN_COUNT_KEY] < 1:
             raise RegressionValidationError(f"Transform emitted no plugins: {artifact_path_value}")
         fragment = yaml_parser.load(artifact_path.read_text(encoding=UTF8_ENCODING))
-        if not fragment[PIPELINE_KEY][INPUTS_KEY]:
+        if PIPELINE_KEY in fragment and not fragment[PIPELINE_KEY][INPUTS_KEY]:
             raise RegressionValidationError(f"Fragment contains no inputs: {artifact_path_value}")
-    if generated_paths != EXPECTED_ARTIFACT_PATHS:
+        plugin_records = artifact.get("plugins")
+        if not isinstance(plugin_records, list) or not plugin_records:
+            raise RegressionValidationError(
+                f"Artifact has no plugin provenance: {artifact_path_value}"
+            )
+        for plugin_record in plugin_records:
+            if not plugin_record.get("human_link") or not str(
+                plugin_record.get("detector_link", "")
+            ).startswith("detector://"):
+                raise RegressionValidationError("Plugin provenance is not human/machine linked")
+    if generated_paths != expected_artifact_paths:
         raise RegressionValidationError("Unexpected generated fragment paths")
 
 
@@ -175,7 +214,7 @@ def validate_parent(artifact_root: Path, manifest: dict[str, Any]) -> None:
         RegressionValidationError: The parent omits a generated fragment.
     """
 
-    parent_path = artifact_root / "fluent-bit.yaml"
+    parent_path = artifact_root / "fluent-bit-source.yaml"
     yaml_parser = YAML(typ="safe")
     parent = yaml_parser.load(parent_path.read_text(encoding=UTF8_ENCODING))
     expected_includes = {
@@ -183,6 +222,49 @@ def validate_parent(artifact_root: Path, manifest: dict[str, Any]) -> None:
     }
     if set(parent.get(INCLUDES_KEY, [])) != expected_includes:
         raise RegressionValidationError("Assembled parent does not include both fragments")
+
+
+def validate_semantic_manifest(
+    artifact_root: Path,
+    manifest: dict[str, Any],
+    target_tool: str,
+) -> None:
+    """Require checksummed second-stage artifacts for every mapped log input.
+
+    Args:
+        artifact_root: Directory containing generated semantic artifacts.
+        manifest: Semantic-stage manifest to verify.
+        target_tool: Expected agent implementation name.
+
+    Raises:
+        RegressionValidationError: Mapping records or generated files are inconsistent.
+    """
+
+    if manifest.get("target", {}).get("tool") != target_tool:
+        raise RegressionValidationError(f"Unexpected semantic target: {target_tool}")
+    if manifest.get("target", {}).get("plugin_count", 0) < 3:
+        raise RegressionValidationError(f"Semantic stage mapped too few {target_tool} inputs")
+    mapping_names = {
+        mapping.get("mapping_name") for mapping in manifest.get("mappings", [])
+    }
+    required_mapping_names = {
+        "nginx_access_combined",
+        "nginx_error",
+        "postgresql_stderr",
+    }
+    if not required_mapping_names.issubset(mapping_names):
+        raise RegressionValidationError(f"Semantic mappings are incomplete for {target_tool}")
+    artifact_paths: set[str] = set()
+    for artifact in manifest.get(ARTIFACTS_KEY, []):
+        artifact_path_value = artifact[PATH_KEY]
+        artifact_paths.add(artifact_path_value)
+        artifact_path = artifact_root / artifact_path_value
+        if not artifact_path.is_file() or sha256_file(artifact_path) != artifact[SHA256_KEY]:
+            raise RegressionValidationError(
+                f"Semantic artifact is missing or changed: {artifact_path_value}"
+            )
+    if artifact_paths != EXPECTED_SEMANTIC_ARTIFACTS[target_tool]:
+        raise RegressionValidationError(f"Unexpected semantic artifacts for {target_tool}")
 
 
 def write_verification_report(artifact_root: Path) -> None:
@@ -195,8 +277,12 @@ def write_verification_report(artifact_root: Path) -> None:
     report = {
         REPORT_STATUS_KEY: REPORT_PASSED_STATUS,
         REPORT_DETECTORS_KEY: sorted(EXPECTED_DETECTORS),
-        REPORT_TRANSFORMS_KEY: sorted(EXPECTED_TRANSFORMS),
-        REPORT_ARTIFACTS_KEY: sorted(EXPECTED_ARTIFACT_PATHS),
+        REPORT_TRANSFORMS_KEY: sorted(set().union(*EXPECTED_TRANSFORMS.values())),
+        REPORT_ARTIFACTS_KEY: sorted(
+            EXPECTED_ARTIFACT_PATHS
+            | EXPECTED_OTELCOL_ARTIFACT_PATHS
+            | set().union(*EXPECTED_SEMANTIC_ARTIFACTS.values())
+        ),
     }
     report_path = artifact_root / VERIFICATION_FILE_NAME
     report_path.write_text(json.dumps(report, indent=2) + "\n", encoding=UTF8_ENCODING)
@@ -227,10 +313,40 @@ def main(arguments: list[str] | None = None) -> int:
     parsed_arguments = build_argument_parser().parse_args(arguments)
     artifact_root = parsed_arguments.artifact_root
     detector_results = load_json_object(artifact_root / "detector-results.json")
-    manifest = load_json_object(artifact_root / "orchestration.json")
+    fluent_bit_manifest = load_json_object(
+        artifact_root / "orchestration-fluent-bit.json"
+    )
+    otelcol_manifest = load_json_object(artifact_root / "orchestration-otelcol.json")
+    fluent_bit_semantic_manifest = load_json_object(
+        artifact_root / "semantic-manifest-fluent-bit.json"
+    )
+    otelcol_semantic_manifest = load_json_object(
+        artifact_root / "semantic-manifest-otelcol.json"
+    )
     validate_detector_results(detector_results)
-    validate_orchestration(artifact_root, manifest)
-    validate_parent(artifact_root, manifest)
+    validate_orchestration(
+        artifact_root,
+        fluent_bit_manifest,
+        EXPECTED_ARTIFACT_PATHS,
+        "fluent-bit",
+    )
+    validate_orchestration(
+        artifact_root,
+        otelcol_manifest,
+        EXPECTED_OTELCOL_ARTIFACT_PATHS,
+        "otelcol-contrib",
+    )
+    validate_parent(artifact_root, fluent_bit_manifest)
+    validate_semantic_manifest(
+        artifact_root,
+        fluent_bit_semantic_manifest,
+        "fluent-bit",
+    )
+    validate_semantic_manifest(
+        artifact_root,
+        otelcol_semantic_manifest,
+        "otelcol-contrib",
+    )
     write_verification_report(artifact_root)
     return 0
 

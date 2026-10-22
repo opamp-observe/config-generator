@@ -22,15 +22,46 @@ class TransformRule:
         name: Stable rule name used in diagnostics.
         for_each: RFC 9535 JSONPath selecting source rows.
         path_from: Optional RFC 9535 JSONPath selecting paths from each source row.
+        path_match: Optional regular expression restricting selected path values.
         fields_from: Output field names mapped to RFC 9535 selectors on each row.
         values: Static plugin values copied into every emitted object.
+        source_format: Stable payload-format hint consumed by semantic mappings.
     """
 
     name: str
     for_each: str
     path_from: str | None
+    path_match: str | None
     fields_from: dict[str, str]
     values: dict[str, Any]
+    source_format: str
+
+
+@dataclass(frozen=True)
+class PluginProvenanceRecord:
+    """Link one generated input plugin to exact detector evidence.
+
+    Attributes:
+        plugin_id: Stable content-derived plugin identity.
+        source_format: Machine-readable payload format hint.
+        human_link: Explanation suitable for operators and audit reports.
+        detector_link: Stable detector URI pointing at the source query row.
+        rule_name: Transform rule that selected the row.
+        source_selector: Exact JSONPath-like pointer to the detector row.
+        source_index: Zero-based position within the rule selection.
+        properties: Normalized plugin values used by the target template.
+        configuration_sha256: Digest of the normalized plugin values.
+    """
+
+    plugin_id: str
+    source_format: str
+    human_link: str
+    detector_link: str
+    rule_name: str
+    source_selector: str
+    source_index: int
+    properties: dict[str, Any]
+    configuration_sha256: str
 
 
 @dataclass(frozen=True)
@@ -257,6 +288,7 @@ class ArtifactRecord:
         plugin_count: Number of normalized plugin entries in the fragment.
         template: Versioned template identity and digest.
         include: Parent-configuration include instruction.
+        plugins: Per-input links back to exact detector evidence.
     """
 
     transform_name: str
@@ -270,6 +302,7 @@ class ArtifactRecord:
     plugin_count: int
     template: TemplateRecord
     include: IncludeRecord
+    plugins: tuple[PluginProvenanceRecord, ...]
 
 
 @dataclass(frozen=True)

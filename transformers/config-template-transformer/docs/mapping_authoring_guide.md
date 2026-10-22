@@ -235,6 +235,10 @@ have distinct jobs:
 - `fields_from` copies named values from each selected row.
 - `path_from` copies one or more non-empty string values into the special
   normalized `path` attribute.
+- `path_match` rejects selected path values that are explanatory candidates
+  rather than usable file paths.
+- `source_format` supplies a stable hint for the optional semantic payload
+  stage. Omit it for metrics, unknown formats, or other non-log inputs.
 
 For the file-input example:
 

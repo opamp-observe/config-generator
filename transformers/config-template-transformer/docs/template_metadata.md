@@ -122,8 +122,9 @@ lock: updating a template sidecar cannot silently change the behavior or target
 range of an existing transform.
 
 `opamp.info/v1alpha2` transform definitions require `render.metadata_file`.
-The generated orchestration manifest uses schema version `2.0`, which adds the
-required template target, support, metadata path, and metadata digest fields.
+The generated orchestration manifest uses schema version `3.0`. It retains the
+template target, support, metadata path, and metadata digest fields introduced
+in version 2.0 and adds required per-plugin detector provenance records.
 
 ## Manifest provenance
 

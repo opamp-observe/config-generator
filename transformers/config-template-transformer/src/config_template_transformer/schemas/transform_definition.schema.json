@@ -77,11 +77,17 @@
               "name": {"type": "string", "minLength": 1, "description": "Stable rule name."},
               "for_each": {"type": "string", "pattern": "^\\$", "description": "RFC 9535 JSONPath selecting source rows."},
               "path_from": {"type": "string", "pattern": "^\\$", "description": "RFC 9535 JSONPath selecting paths from each row."},
+              "path_match": {"type": "string", "minLength": 1, "description": "Regular expression restricting path values selected by path_from."},
               "fields_from": {
                 "type": "object",
                 "propertyNames": {"pattern": "^[A-Za-z_][A-Za-z0-9_]*$"},
                 "additionalProperties": {"type": "string", "pattern": "^\\$"},
                 "description": "Output fields mapped to RFC 9535 JSONPath selectors evaluated against each selected row."
+              },
+              "source_format": {
+                "type": "string",
+                "pattern": "^[a-z0-9]+(?:[._-][a-z0-9]+)*$",
+                "description": "Stable source payload format used by the optional semantic mapping stage."
               },
               "values": {
                 "type": "object",

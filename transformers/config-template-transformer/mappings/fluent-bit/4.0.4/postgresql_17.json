@@ -22,6 +22,7 @@
       "name": "postgresql_logs",
       "for_each": "$.queries.log_locations[*]",
       "path_from": "$.log_directory_candidate",
+      "source_format": "postgresql.stderr",
       "values": {
         "name": "tail",
         "tag": "postgresql.17.logs",

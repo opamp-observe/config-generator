@@ -122,6 +122,27 @@ The include path is interpreted relative to the parent configuration by
 Fluent Bit. Keep the generated directory beside the assembled parent, or use
 an include path appropriate for the final deployment layout.
 
+## Generate semantic payload configuration
+
+After `render`, optionally generate parsing and OpenTelemetry semantic payload
+configuration from the per-plugin provenance records:
+
+```powershell
+.\.venv\Scripts\obs-config-transformer.exe semantic-map `
+  --manifest build/orchestration.json `
+  --detector-results examples/detector_results.json `
+  --mapping-root semantic-mappings `
+  --output-root build `
+  --semantic-manifest-output build/semantic-manifest.json
+```
+
+Use repeated `--mapping` arguments instead of `--mapping-root` when a custom
+NGINX format or PostgreSQL logging configuration needs an explicitly selected
+mapping. The generated semantic configuration replaces the source-only inputs;
+loading both would collect the same log files twice. See the repository
+[semantic payload mapping guide](../../../docs/semantic_payload_mapping.md)
+for the full contracts, mappings, agent behavior, and extension workflow.
+
 ## Define another mapping or transform
 
 Each transform definition declares:

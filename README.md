@@ -85,18 +85,28 @@ Each template also has a validated
 that declares its capabilities, signals, target observability tool, and
 supported tool-version range.
 See the [execution-flow diagrams](transformers/config-template-transformer/docs/execution_flow.md)
-for the complete detector-to-agent workflow and detailed transformer logic.
+for the complete detector-to-agent workflow, detailed transformer logic, and
+configuration-file relationships.
 The [mapping authoring guide](transformers/config-template-transformer/docs/mapping_authoring_guide.md)
 is the beginner-focused walkthrough for plugin parameters, defaults, JSONPath,
 Jinja templates, and Fluent Bit processors.
+The [semantic payload mapping guide](docs/semantic_payload_mapping.md) documents
+the optional post-transform stage, per-plugin detector provenance, maintained
+NGINX/PostgreSQL mappings, manual overrides, and the Fluent Bit and Collector
+adapter implementations.
 The [observability configuration roadmap](docs/roadmap/observability_configuration_roadmap.md)
 tracks normalized log discovery and deduplication, database queries, MongoDB,
 additional agents, regression evidence, and mapping-version audits.
+The [adaptive dashboard generation proposal](docs/roadmap/adaptive_dashboard_generation.md)
+describes how bounded agents can turn transformer provenance and telemetry
+contracts into validated Grafana or Kibana dashboard bundles for Loki,
+Prometheus, ClickHouse, and Elasticsearch backends.
 
 Fluent Bit 4.x/5+ YAML and OpenTelemetry Collector Contrib 0.163+ YAML are
 implemented targets. The maintained catalogue maps NGINX logs and metrics to
-both agents and PostgreSQL logs to Fluent Bit tail inputs with a Lua processor
-placeholder. The target-adapter contract is designed for the other agents
+both agents and PostgreSQL logs to both Fluent Bit tail inputs and Collector
+filelog receivers. The optional semantic stage generates source parsing and
+OpenTelemetry-shaped payload configuration. The target-adapter contracts are designed for the other agents
 listed in `universal-obs-agent-installer/spec.md`: Fluentd, Vector, Telegraf,
 Elastic Agent, and Filebeat.
 

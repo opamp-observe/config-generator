@@ -81,10 +81,15 @@
               "name": {"type": "string", "minLength": 1},
               "for_each": {"type": "string", "pattern": "^\\$"},
               "path_from": {"type": "string", "pattern": "^\\$"},
+              "path_match": {"type": "string", "minLength": 1},
               "fields_from": {
                 "type": "object",
                 "propertyNames": {"pattern": "^[A-Za-z_][A-Za-z0-9_]*$"},
                 "additionalProperties": {"type": "string", "pattern": "^\\$"}
+              },
+              "source_format": {
+                "type": "string",
+                "pattern": "^[a-z0-9]+(?:[._-][a-z0-9]+)*$"
               },
               "values": {
                 "type": "object",
