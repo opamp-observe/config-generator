@@ -1,8 +1,10 @@
 # Oracle Database monitoring SQL: performance, slow queries, locks and internal logs
 
-Research date: 18 October 2026. Scope: Oracle Database 12.2, 19c, 21c and Oracle AI Database 26ai. Legacy releases are included for installed-estate compatibility; inclusion does not imply current support. Oracle states that 26ai replaces 23ai, and the former 23ai documentation redirects to 26ai. Unpatched 23ai installations are not independently certified by this matrix. [Oracle release announcement](https://www.oracle.com/news/announcement/ai-world-database-26ai-powers-the-ai-for-data-revolution-2025-10-14/).
+## Scope and interpretation
 
-These are operational query patterns assembled from Oracle's documented interfaces. Thresholds and polling intervals are recommendations to tune locally. Compatibility is based on documentation, not execution tests against each release. The structure follows the companion PostgreSQL monitoring document; query identifiers are local to this Oracle document.
+Scope: Oracle Database 12.2, 19c, 21c and Oracle AI Database 26ai. Legacy releases are included for installed-estate compatibility; inclusion does not imply current support. Oracle states that 26ai replaces 23ai.
+
+These are operational query patterns assembled from Oracle's documented interfaces. Thresholds and polling intervals are recommendations to tune locally. Compatibility is based on documentation, not execution tests against each release. 
 
 ## What can be retrieved entirely through SQL?
 

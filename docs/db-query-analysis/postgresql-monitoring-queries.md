@@ -1,6 +1,8 @@
 # PostgreSQL monitoring SQL: performance, slow queries, locks and internal logs
 
-Research date: 18 October 2026. Scope: community PostgreSQL 14–18, the supported major releases at the research date. PostgreSQL 19 is pre-release and excluded; versions 13 and earlier are outside this matrix. [Version policy](https://www.postgresql.org/support/versioning/).
+## Scope and interpretation
+
+Scope: community PostgreSQL 14–18. PostgreSQL 19 is pre-release and excluded; versions 13 and earlier are outside this matrix. [Version policy](https://www.postgresql.org/support/versioning/).
 
 These are recommended operational query patterns assembled from PostgreSQL's documented interfaces, rather than a claim that PostgreSQL publishes this exact query pack. Thresholds, ranking choices and polling intervals below are starting recommendations to tune against your workload. The queries were reviewed against the versioned documentation; they have not been executed against live servers of every version.
 
