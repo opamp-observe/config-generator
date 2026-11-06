@@ -34,6 +34,11 @@ Both launchers build `opamp-nginx-postgresql-regression:test`, run it without
 published ports, and retain output below `build/regression-artifacts` by
 default. Pass a different output directory as the first argument.
 
+The launchers grant `SYS_PTRACE` and use the unconfined seccomp profile so the
+root osquery process can inspect the PostgreSQL process running as its
+unprivileged operating-system user. These permissions apply only to the
+short-lived, unpublished regression container.
+
 To exercise the same flow through the opt-in Python regression test:
 
 ```powershell

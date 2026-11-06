@@ -25,6 +25,10 @@ if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 $runArguments = @(
     "run",
     "--rm",
+    "--cap-add",
+    "SYS_PTRACE",
+    "--security-opt",
+    "seccomp=unconfined",
     "--volume",
     "${resolvedOutput}:/artifacts",
     "opamp-nginx-postgresql-regression:test"
