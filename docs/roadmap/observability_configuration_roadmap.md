@@ -13,7 +13,8 @@ observability configuration system. It focuses on six areas:
 
 - general and application-specific log-source discovery;
 - explicit duplicate-log policy and deterministic deduplication;
-- safe database queries for operational data such as slow-query statistics;
+- [safe database queries](../db-query-analysis/index.md) for operational data
+  such as slow-query statistics;
 - MongoDB discovery and configuration support;
 - additional observability-agent adapters and mappings;
 - container-based regression evidence and automated mapping-version gap
