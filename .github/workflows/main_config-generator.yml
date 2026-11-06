@@ -45,7 +45,7 @@ jobs:
         run: python -m pip install --requirement requirements.txt
 
       - name: Run repository validation
-        run: ./tests/run_validation.sh
+        run: bash ./tests/run_validation.sh
 
   deployment-smoke-test:
     name: Test detector-to-configuration deployment
@@ -57,7 +57,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Build and run the regression deployment
-        run: ./tests/regression/run_regression_container.sh
+        run: bash ./tests/regression/run_regression_container.sh
 
       - name: Show deployment verification
         if: always()

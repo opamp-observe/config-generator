@@ -169,7 +169,7 @@ cleanup workflow is required.
 Run the same smoke test locally from the repository root:
 
 ```sh
-./tests/regression/run_regression_container.sh
+bash ./tests/regression/run_regression_container.sh
 ```
 
 Successful output is written below `build/regression-artifacts`, including
