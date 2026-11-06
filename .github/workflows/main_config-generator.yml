@@ -1,0 +1,69 @@
+# Copyright 2026 opamp.info
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+name: OpAMP configuration generator CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: config-generator-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    name: Validate detectors and configuration generation
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check out configuration generator
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install validation dependencies
+        run: python -m pip install --requirement requirements.txt
+
+      - name: Run repository validation
+        run: ./tests/run_validation.sh
+
+  deployment-smoke-test:
+    name: Test detector-to-configuration deployment
+    needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Check out configuration generator
+        uses: actions/checkout@v4
+
+      - name: Build and run the regression deployment
+        run: ./tests/regression/run_regression_container.sh
+
+      - name: Show deployment verification
+        if: always()
+        run: |
+          if [[ -f build/regression-artifacts/regression-verification.json ]]; then
+            cat build/regression-artifacts/regression-verification.json
+          else
+            echo "The deployment did not produce a verification report."
+          fi

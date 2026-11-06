@@ -89,6 +89,9 @@ for the complete detector-to-agent workflow and detailed transformer logic.
 The [mapping authoring guide](transformers/config-template-transformer/docs/mapping_authoring_guide.md)
 is the beginner-focused walkthrough for plugin parameters, defaults, JSONPath,
 Jinja templates, and Fluent Bit processors.
+The [database query analysis index](docs/db-query-analysis/index.md) summarizes
+the reviewed MongoDB, MySQL, Oracle Database, PostgreSQL, and SQL Server
+operational query guides and their version and collection boundaries.
 The [observability configuration roadmap](docs/roadmap/observability_configuration_roadmap.md)
 tracks normalized log discovery and deduplication, database queries, MongoDB,
 additional agents, regression evidence, and mapping-version audits.
@@ -109,5 +112,8 @@ Elastic Agent, and Filebeat.
 The validation suite checks manifests and pack structure, calls
 `osqueryi --config_check` for every pack, and executes every SQL statement for
 the current platform. See [container testing](docs/container_testing.md) for
-Linux and product-image testing.
+Linux and product-image testing. The `OpAMP configuration generator CI`
+workflow runs this validation and then performs a self-contained deployment
+smoke test with the repository's NGINX and PostgreSQL regression container.
+It does not deploy cloud infrastructure or require cloud credentials.
 

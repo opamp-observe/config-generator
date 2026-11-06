@@ -153,3 +153,26 @@ version evidence such as `PG_MAJOR`, `ORACLE_HOME`, or `DOMAIN_HOME` may be
 unavailable. Grant these only to the short-lived detector sidecar. If that
 capability is prohibited, install/run osquery inside the product image instead.
 
+## Continuous integration deployment smoke test
+
+The `OpAMP configuration generator CI` GitHub Actions workflow runs for pull
+requests, pushes to `main`, and manual dispatches. It first runs the repository
+validation suite, then uses
+`tests/regression/run_regression_container.sh` as a deployment smoke test.
+
+The smoke test builds and starts the disposable NGINX and PostgreSQL regression
+image, detects both services, generates their Fluent Bit configuration, and
+validates the exported artifacts. It is intentionally local to the GitHub
+runner: no AWS or Azure infrastructure, credentials, repository variables, or
+cleanup workflow is required.
+
+Run the same smoke test locally from the repository root:
+
+```sh
+./tests/regression/run_regression_container.sh
+```
+
+Successful output is written below `build/regression-artifacts`, including
+`regression-verification.json`. A missing report or any failed detector,
+generation, or artifact check causes the workflow to fail.
+

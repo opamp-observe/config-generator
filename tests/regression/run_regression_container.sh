@@ -17,5 +17,7 @@ docker build \
     --tag "opamp-nginx-postgresql-regression:test" \
     "${repository_root}"
 docker run --rm \
+    --cap-add SYS_PTRACE \
+    --security-opt seccomp=unconfined \
     --volume "${output_directory}:/artifacts" \
     "opamp-nginx-postgresql-regression:test"

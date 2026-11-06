@@ -20,6 +20,8 @@ CONTAINER_TEST_ENVIRONMENT = "RUN_CONTAINER_REGRESSION"
 CONTAINER_TEST_ENABLED_VALUE = "1"
 DOCKER_COMMAND = "docker"
 IMAGE_NAME = "opamp-nginx-postgresql-regression:test"
+PROCESS_INSPECTION_CAPABILITY = "SYS_PTRACE"
+PROCESS_INSPECTION_SECURITY_OPTION = "seccomp=unconfined"
 BUILD_TIMEOUT_SECONDS = 900
 RUN_TIMEOUT_SECONDS = 180
 VERIFICATION_FILE_NAME = "regression-verification.json"
@@ -70,6 +72,10 @@ class RegressionContainerTests(unittest.TestCase):
                     DOCKER_COMMAND,
                     "run",
                     "--rm",
+                    "--cap-add",
+                    PROCESS_INSPECTION_CAPABILITY,
+                    "--security-opt",
+                    PROCESS_INSPECTION_SECURITY_OPTION,
                     "--volume",
                     f"{output_root.resolve()}:/artifacts",
                     IMAGE_NAME,
