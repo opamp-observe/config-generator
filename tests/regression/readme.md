@@ -27,7 +27,7 @@ From the repository root on PowerShell:
 On a POSIX shell:
 
 ```sh
-./tests/regression/run_regression_container.sh
+bash ./tests/regression/run_regression_container.sh
 ```
 
 Both launchers build `opamp-nginx-postgresql-regression:test`, run it without
