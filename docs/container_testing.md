@@ -106,8 +106,8 @@ PostgreSQL project publishes a stable 19 release.
 ## Ready-to-build sidecar
 
 The repository includes `containers/Dockerfile`, which adds Python to the
-osquery 5.17 Debian image and copies the detector runner and packs. Build it
-from the repository root:
+osquery 5.17 Debian image and copies the detector runner, packs, schemas, and
+detector validation program. Build it from the repository root:
 
 ```sh
 docker build -f containers/Dockerfile -t opamp-detectors:test .

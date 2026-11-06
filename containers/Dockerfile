@@ -16,5 +16,7 @@ RUN apt-get update \
 WORKDIR /opt/detectors
 COPY runner.py /opt/detectors/runner.py
 COPY detectors /opt/detectors/detectors
+COPY schemas /opt/detectors/schemas
+COPY tests/validate_detectors.py /opt/detectors/tests/validate_detectors.py
 
 ENTRYPOINT ["python3", "/opt/detectors/runner.py", "--osquery", "/usr/bin/osqueryi"]
