@@ -35,10 +35,10 @@ jobs:
       VALIDATION_IMAGE: opamp-config-generator-validation:test
     steps:
       - name: Check out configuration generator
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v7
         with:
           python-version: "3.12"
           cache: pip
@@ -67,7 +67,7 @@ jobs:
     timeout-minutes: 20
     steps:
       - name: Check out configuration generator
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Build and run the regression deployment
         run: bash ./tests/regression/run_regression_container.sh
