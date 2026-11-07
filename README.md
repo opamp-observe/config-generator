@@ -3,6 +3,11 @@ Copyright 2026 opamp.info
 Licensed under the Apache License, Version 2.0.
 -->
 
+# Retired
+-------------------------------------------------
+This branch is only retained as it illustrates the complexity of an idea, and supports a blog. This branch must NEVER be merged intro main or be updated
+-------------------------------------------------
+
 # Osquery product detectors
 
 This repository contains separate, versioned osquery detectors for:
