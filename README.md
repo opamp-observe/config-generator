@@ -89,7 +89,7 @@ for the complete detector-to-agent workflow and detailed transformer logic.
 The [mapping authoring guide](transformers/config-template-transformer/docs/mapping_authoring_guide.md)
 is the beginner-focused walkthrough for plugin parameters, defaults, JSONPath,
 Jinja templates, and Fluent Bit processors.
-The [database query analysis index](docs/db-query-analysis/index.md) summarizes
+The [database query analysis index](docs/db-query-analysis/readme.md) summarizes
 the reviewed MongoDB, MySQL, Oracle Database, PostgreSQL, and SQL Server
 operational query guides and their version and collection boundaries.
 The [observability configuration roadmap](docs/roadmap/observability_configuration_roadmap.md)
